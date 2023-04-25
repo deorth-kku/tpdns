@@ -31,6 +31,10 @@ type server struct {
 }
 
 func ReadConf(filename string) (c tpdnsConfig, err error) {
+	c = tpdnsConfig{
+		Domain: domain{TTL: 60},
+		Server: server{Port: 53},
+	}
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		return
