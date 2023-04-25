@@ -21,4 +21,6 @@ tpdns
 # Go workspace file
 go.work
 
-*/*.json
+# all json
+**/*.json
+*.json
