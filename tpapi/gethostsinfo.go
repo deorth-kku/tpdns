@@ -1,19 +1,6 @@
 package tpapi
 
-import (
-	"encoding/json"
-	"fmt"
-	"time"
-
-	"github.com/parnurzeal/gorequest"
-)
-
 type hosts_info struct {
-	HostsInfo  host_info `json:"hosts_info"`
-	Error_code int       `json:"error_code"`
-}
-
-type host_info struct {
 	HostInfo []deviceline `json:"host_info"`
 }
 type deviceline map[string]Device
@@ -39,25 +26,10 @@ type Device struct {
 	PlanRule     []any  `json:"plan_rule"`
 }
 
-func (s *tpSession) Gethostsinfo(timeout int) (devices []Device, err error) {
-	data := `{"hosts_info": {"table": "host_info"}, "method": "get"}`
-	_, body, errs := gorequest.New().
-		Post(s.apiurl).
-		Timeout(time.Duration(timeout) * time.Second).
-		Send(data).
-		End()
-	if errs != nil {
-		err = errs[0]
-		return
-	}
-	var h hosts_info
-	err = json.Unmarshal([]byte(body), &h)
-	if err != nil {
-		return
-	}
-	if h.Error_code != 0 {
-		err = fmt.Errorf("get token failed with %d", h.Error_code)
-	}
+const Gethostsinfodata = `{"hosts_info": {"table": "host_info"}, "method": "get"}`
+
+func (s *TPSession) Gethostsinfo(timeout int) (devices []Device, err error) {
+	h, err := s.ApiPost(timeout, Gethostsinfodata)
 	for _, line := range h.HostsInfo.HostInfo {
 		for _, d := range line {
 			devices = append(devices, d)

@@ -9,7 +9,7 @@ import (
 	"github.com/parnurzeal/gorequest"
 )
 
-type tpSession struct {
+type TPSession struct {
 	site   string
 	passwd string
 	stok   string
@@ -30,19 +30,19 @@ type loginRsp struct {
 	Stok       string `json:"stok"`
 }
 
-func TPSessionStok(site string, stok string) (session tpSession) {
-	session = tpSession{site: site, stok: stok}
+func TPSessionStok(site string, stok string) (session TPSession) {
+	session = TPSession{site: site, stok: stok}
 	session.flushapi()
 	return
 }
 
-func TPSessionPasswd(site string, passwd string) (session tpSession, err error) {
-	session = tpSession{site: site, passwd: passwdEncryption(passwd)}
+func TPSessionPasswd(site string, passwd string) (session TPSession, err error) {
+	session = TPSession{site: site, passwd: passwdEncryption(passwd)}
 	err = session.flushstok()
 	return
 }
 
-func (s *tpSession) flushstok() error {
+func (s *TPSession) flushstok() error {
 	data := loginRequest{Method: "do", Login: loginData{Password: s.passwd}}
 	_, body, errs := gorequest.New().
 		Post(s.site).
@@ -66,6 +66,6 @@ func (s *tpSession) flushstok() error {
 	return nil
 }
 
-func (s *tpSession) flushapi() {
+func (s *TPSession) flushapi() {
 	s.apiurl, _ = url.JoinPath(s.site, fmt.Sprintf("stok=%s/ds", s.stok))
 }
