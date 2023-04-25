@@ -28,23 +28,28 @@ func (gdata *dns_parser) parseQuery(m *dns.Msg) {
 			m.Rcode = dns.RcodeNameError
 			break
 		}
-		var line string
+
+		var ip string
+		var rr_type string
 		switch q.Qtype {
 		case dns.TypeA:
-			log.Printf("Query for %s A\n", q.Name)
-			var ip string
+			rr_type = "A"
 			if strings.HasSuffix(q.Name, gdata.pub_zone_name) {
 				ip = gdata.pub_ip
 			} else {
 				ip = ips.IPv4
 			}
-			line = fmt.Sprintf("%s A %s", q.Name, ip)
 		case dns.TypeAAAA:
-			log.Printf("Query for %s AAAA\n", q.Name)
-			ip := ips.IPv6
-			line = fmt.Sprintf("%s %d IN AAAA %s", q.Name, gdata.countdown, ip)
+			rr_type = "AAAA"
+			ip = ips.IPv6
+			if ip == "::" {
+				log.Printf("skipping AAAA for %s because it doesn't have ipv6", device_name)
+				continue
+			}
 		}
 
+		log.Printf("Query for %s %s\n", q.Name, rr_type)
+		line := fmt.Sprintf("%s %d IN %s %s", q.Name, gdata.countdown, rr_type, ip)
 		rr, err := dns.NewRR(line)
 		if err == nil {
 			m.Answer = append(m.Answer, rr)
