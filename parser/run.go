@@ -25,8 +25,8 @@ func (gdata *dns_parser) parseQuery(m *dns.Msg) {
 		ips, ok = gdata.dns_cache[device_name]
 		if !ok {
 			log.Printf("failed to find %s in cache", device_name)
-			m.SetRcode(m, dns.RcodeNameError)
-			continue
+			m.Rcode = dns.RcodeNameError
+			break
 		}
 
 		switch q.Qtype {
