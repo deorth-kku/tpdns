@@ -27,6 +27,7 @@ type domain struct {
 type server struct {
 	IP   string `json:"ip"`
 	Port uint16 `json:"port"`
+	TTL  uint   `json:"ttl"`
 }
 
 func ReadConf(filename string) (c tpdnsConfig, err error) {
