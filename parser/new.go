@@ -8,6 +8,7 @@ type dns_parser struct {
 	pub_ip        string
 	pub_zone_name string
 	ttl           uint
+	countdown     uint
 	resetTimer    chan bool
 }
 
@@ -16,8 +17,8 @@ type dualstackips struct {
 	IPv6 string
 }
 
-func Parser(pub_zone string, ttl uint, conn tpapi.TPSession) dns_parser {
-	gd := dns_parser{
+func Parser(pub_zone string, ttl uint, conn tpapi.TPSession) *dns_parser {
+	gd := &dns_parser{
 		tp_conn:       conn,
 		pub_zone_name: pub_zone,
 		ttl:           ttl,

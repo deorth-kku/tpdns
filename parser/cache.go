@@ -39,15 +39,16 @@ func (gdata *dns_parser) clearCache() {
 	if gdata.ttl == 0 {
 		return
 	}
-	countdown := int(gdata.ttl)
+	gdata.countdown = gdata.ttl
 
 	// Loop until interrupted
 	for {
 		// Check if the timer has reached zero
-		if countdown == 0 {
+		if gdata.countdown == 0 {
+
 			gdata.dns_cache = make(map[string]dualstackips, 0)
 			log.Println("cache cleared")
-			countdown = int(gdata.ttl)
+			gdata.countdown = gdata.ttl
 		}
 		// Wait for one second
 		time.Sleep(time.Second)
@@ -59,9 +60,9 @@ func (gdata *dns_parser) clearCache() {
 				<-gdata.resetTimer
 			}
 			log.Println("countdown reset")
-			countdown = int(gdata.ttl)
+			gdata.countdown = gdata.ttl
 		default:
-			countdown--
+			gdata.countdown--
 		}
 	}
 }

@@ -28,7 +28,7 @@ func (gdata *dns_parser) parseQuery(m *dns.Msg) {
 			m.Rcode = dns.RcodeNameError
 			break
 		}
-
+		var line string
 		switch q.Qtype {
 		case dns.TypeA:
 			log.Printf("Query for %s A\n", q.Name)
@@ -38,18 +38,16 @@ func (gdata *dns_parser) parseQuery(m *dns.Msg) {
 			} else {
 				ip = ips.IPv4
 			}
-
-			rr, err := dns.NewRR(fmt.Sprintf("%s A %s", q.Name, ip))
-			if err == nil {
-				m.Answer = append(m.Answer, rr)
-			}
+			line = fmt.Sprintf("%s A %s", q.Name, ip)
 		case dns.TypeAAAA:
 			log.Printf("Query for %s AAAA\n", q.Name)
 			ip := ips.IPv6
-			rr, err := dns.NewRR(fmt.Sprintf("%s AAAA %s", q.Name, ip))
-			if err == nil {
-				m.Answer = append(m.Answer, rr)
-			}
+			line = fmt.Sprintf("%s %d IN AAAA %s", q.Name, gdata.countdown, ip)
+		}
+
+		rr, err := dns.NewRR(line)
+		if err == nil {
+			m.Answer = append(m.Answer, rr)
 		}
 	}
 }
