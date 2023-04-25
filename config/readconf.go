@@ -22,12 +22,12 @@ type router struct {
 type domain struct {
 	PubZone  string `json:"public_zone_name"`
 	PrivZone string `json:"private_zone_name"`
+	TTL      uint   `json:"ttl"`
 }
 
 type server struct {
 	IP   string `json:"ip"`
 	Port uint16 `json:"port"`
-	TTL  uint   `json:"ttl"`
 }
 
 func ReadConf(filename string) (c tpdnsConfig, err error) {
