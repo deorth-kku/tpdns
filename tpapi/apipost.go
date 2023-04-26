@@ -15,6 +15,24 @@ type TPResponse struct {
 }
 
 func (s *TPSession) ApiPost(timeout int, data ...any) (rsp TPResponse, err error) {
+	rsp, err = s.apiPost(timeout, data...)
+	if err != nil {
+		return
+	} else if rsp.Error_code == EUNAUTH {
+		err = s.flushstok()
+		if err != nil {
+			return
+		}
+		rsp, err = s.apiPost(timeout, data...)
+	}
+
+	if rsp.Error_code != ENONE {
+		err = fmt.Errorf("get token failed with %d", rsp.Error_code)
+	}
+	return
+}
+
+func (s *TPSession) apiPost(timeout int, data ...any) (rsp TPResponse, err error) {
 	r := gorequest.New().
 		Post(s.apiurl).
 		Timeout(time.Duration(timeout) * time.Second)
@@ -27,11 +45,5 @@ func (s *TPSession) ApiPost(timeout int, data ...any) (rsp TPResponse, err error
 		return
 	}
 	err = json.Unmarshal([]byte(body), &rsp)
-	if err != nil {
-		return
-	}
-	if rsp.Error_code != 0 {
-		err = fmt.Errorf("get token failed with %d", rsp.Error_code)
-	}
 	return
 }

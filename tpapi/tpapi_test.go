@@ -59,3 +59,20 @@ func TestGetboth(t *testing.T) {
 	}
 
 }
+
+func TestAuthRetry(t *testing.T) {
+	conf, err := config.ReadConf("../config.json")
+	if err != nil {
+		t.Error(err)
+	}
+	c := TPSessionStok(conf.Router.Url, "FakeStokWontWork")
+	c.passwd = passwdEncryption(conf.Router.Passwd)
+	d, err := c.Getwaninfo(5)
+	if err != nil {
+		t.Error(err)
+	}
+	if d.IPAddr == "" {
+		t.Error("Getwaninfo returned empty info")
+	}
+
+}
