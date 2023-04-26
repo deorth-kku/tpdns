@@ -27,7 +27,7 @@ func (s *TPSession) ApiPost(timeout int, data ...any) (rsp TPResponse, err error
 	}
 
 	if rsp.Error_code != ENONE {
-		err = fmt.Errorf("get token failed with %d", rsp.Error_code)
+		err = fmt.Errorf("get token failed with %s", Tp_errors[rsp.Error_code])
 	}
 	return
 }
