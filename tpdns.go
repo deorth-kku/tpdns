@@ -1,8 +1,10 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/deorth-kku/tpdns/config"
 	"github.com/deorth-kku/tpdns/parser"
@@ -11,10 +13,30 @@ import (
 )
 
 func main() {
-	filename := "./config.json"
+	var filename string
+	var logfile string
+	var h bool
+	flag.StringVar(&filename, "c", "./config.json", "Set config file")
+	flag.StringVar(&logfile, "l", "-", "Set log file")
+	flag.BoolVar(&h, "h", false, "Show help")
+	flag.Parse()
+
+	if h {
+		flag.Usage()
+		os.Exit(0)
+	}
+	if logfile != "-" {
+		file, err := os.OpenFile(logfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.SetOutput(file)
+		defer file.Close()
+	}
+
 	conf, err := config.ReadConf(filename)
 	if err != nil {
-		log.Fatalf("failed to read config file :%s, error: %s\n", filename, err)
+		log.Fatalf("failed to read config file : %s, error: %s\n", filename, err)
 	}
 	var c tpapi.TPSession
 	if conf.Router.Stok != "" {
