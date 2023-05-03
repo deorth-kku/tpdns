@@ -48,6 +48,12 @@ func main() {
 		}
 	}
 	dp := parser.Parser(conf.Domain.PubZone, conf.Domain.TTL, c)
+	dp.SetOnDeviceOnline(func(dev tpapi.Device) {
+		fmt.Printf("new device online %s\n", dev.Hostname)
+	})
+	dp.SetOnReconnect(func(ipv4 string, ipv6 string) {
+		fmt.Printf("reconnected with ipv4: %s, ipv6: %s\n", ipv4, ipv6)
+	})
 
 	// attach request handler func
 	dns.HandleFunc(conf.Domain.PrivZone, dp.HandleDnsRequest)

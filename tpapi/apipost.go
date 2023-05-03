@@ -8,6 +8,12 @@ import (
 	"github.com/parnurzeal/gorequest"
 )
 
+type Network struct {
+	WanStatus   WanInfo   `json:"wan_status"`
+	WanStatus2  WanInfo   `json:"wan_status_2"`
+	Lanv6Status Lanv6Info `json:"lanv6_status"`
+}
+
 type TPResponse struct {
 	Network    Network    `json:"network"`
 	HostsInfo  hosts_info `json:"hosts_info"`
