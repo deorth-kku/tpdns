@@ -1,9 +1,5 @@
 package tpapi
 
-type Network struct {
-	WanStatus  WanInfo `json:"wan_status"`
-	WanStatus2 WanInfo `json:"wan_status_2"`
-}
 
 type WanInfo struct {
 	IPAddr     string `json:"ipaddr"`

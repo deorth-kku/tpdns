@@ -15,8 +15,8 @@ func (gdata *dns_parser) parseQuery(m *dns.Msg) {
 		device_name = strings.ToLower(device_name)
 
 		ips, ok := gdata.dns_cache[device_name]
-		if !ok && !flushed {
-			log.Printf("%s not found in cache \n", device_name)
+		if gdata.needFlush || (!ok && !flushed) {
+			log.Printf("%s not found in cache or cache outdated\n", device_name)
 			gdata.flushCache()
 			log.Print("finished flushCache \n")
 			flushed = true

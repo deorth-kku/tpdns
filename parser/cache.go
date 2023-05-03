@@ -10,12 +10,14 @@ import (
 )
 
 func (gdata *dns_parser) flushCache() {
+	gdata.needFlush = false
 	log.Println("started flushCache")
 	ds, err := gdata.tp_conn.ApiPost(1, tpapi.Gethostsinfodata, tpapi.Getwaninfodata)
 	if err != nil {
 		log.Printf("failed to get hosts info: %s\n", err)
 	}
-	gdata.dns_cache = make(map[string]dualstackips, 0)
+
+	new_cache := make(map[string]dualstackips, 0)
 	for _, line := range ds.HostsInfo.HostInfo {
 		for _, info := range line {
 			host, err := url.QueryUnescape(info.Hostname)
@@ -28,14 +30,28 @@ func (gdata *dns_parser) flushCache() {
 				continue
 			}
 			ips := dualstackips{info.IP, info.IPv6}
-			gdata.dns_cache[host] = ips
+			new_cache[host] = ips
+
+			if _, ok := gdata.dns_cache[host]; !ok {
+				//device without a name wont be sent, for now
+				gdata.eventDeviceOnline <- info
+			}
 		}
 	}
-	gdata.pub_ip = ds.Network.WanStatus.IPAddr
+	gdata.dns_cache = new_cache
+
+	if gdata.pub_ip != ds.Network.WanStatus.IPAddr {
+		gdata.pub_ip = ds.Network.WanStatus.IPAddr
+		i, err := gdata.tp_conn.Getlanv6info(1)
+		if err != nil {
+			log.Printf("failed to get lanv6info")
+		}
+		gdata.eventReconnect <- dualstackips{gdata.pub_ip, i.Prefix}
+	}
 	gdata.resetTimer <- true
 }
 
-func (gdata *dns_parser) clearCache() {
+func (gdata *dns_parser) ttlCountdown() {
 	if gdata.ttl == 0 {
 		return
 	}
@@ -45,9 +61,7 @@ func (gdata *dns_parser) clearCache() {
 	for {
 		// Check if the timer has reached zero
 		if gdata.countdown == 0 {
-
-			gdata.dns_cache = make(map[string]dualstackips, 0)
-			log.Println("cache cleared")
+			gdata.needFlush = true
 			gdata.countdown = gdata.ttl
 		}
 		// Wait for one second
