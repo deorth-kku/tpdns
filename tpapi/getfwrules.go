@@ -18,11 +18,12 @@ type FwRule struct {
 
 const Getfwrulesdata = `{"firewall": {"table": "redirect"}, "method": "get"}`
 
-func (s *TPSession) Getfwrules(timeout int) (rules []FwRule, err error) {
+func (s *TPSession) Getfwrules(timeout int) (rules FwRuleLine, err error) {
+	rules = make(FwRuleLine)
 	h, err := s.ApiPost(timeout, Getfwrulesdata)
 	for _, line := range h.Firewall.Redirect {
-		for _, r := range line {
-			rules = append(rules, r)
+		for n, r := range line {
+			rules[n] = r
 		}
 	}
 	return
