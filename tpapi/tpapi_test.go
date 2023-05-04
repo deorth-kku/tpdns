@@ -41,10 +41,34 @@ func TestGetfwrules(t *testing.T) {
 		t.Error(err)
 	}
 	if len(rs) == 0 {
-		t.Error("Gethostsinfo returned empty list")
+		t.Error("Getfwrules returned empty list")
 	}
 }
 
+func TestSetfwrules(t *testing.T) {
+	c := getconn(t)
+	for i := uint16(10000); i < 10002; i++ {
+		err := c.AddFwRule(1, i, "192.168.101.254", "", "all")
+		if err != nil {
+			t.Error(err)
+		}
+	}
+	rs, err := c.Getfwrules(5)
+	if err != nil {
+		t.Error(err)
+	}
+	var names []string
+	for n, r := range rs {
+		if r.DestPort == "10000" || r.DestPort == "10001" {
+			names = append(names, n)
+		}
+	}
+	err = c.DelFwRule(1, names...)
+	if err != nil {
+		t.Error(err)
+	}
+
+}
 func TestGetwaninfo(t *testing.T) {
 	c := getconn(t)
 	d, err := c.Getwaninfo(5)
