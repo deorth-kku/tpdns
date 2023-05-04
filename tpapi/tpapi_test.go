@@ -34,6 +34,17 @@ func TestGethostinfo(t *testing.T) {
 	}
 }
 
+func TestGetfwrules(t *testing.T) {
+	c := getconn(t)
+	rs, err := c.Getfwrules(5)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(rs) == 0 {
+		t.Error("Gethostsinfo returned empty list")
+	}
+}
+
 func TestGetwaninfo(t *testing.T) {
 	c := getconn(t)
 	d, err := c.Getwaninfo(5)

@@ -17,6 +17,7 @@ type Network struct {
 type TPResponse struct {
 	Network    Network    `json:"network"`
 	HostsInfo  hosts_info `json:"hosts_info"`
+	Firewall   FwRules    `json:"firewall"`
 	Error_code int        `json:"error_code"`
 }
 
