@@ -7,9 +7,11 @@ import (
 )
 
 type tpdnsConfig struct {
-	Router router `json:"router"`
-	Domain domain `json:"domain"`
-	Server server `json:"server"`
+	Router  router          `json:"router"`
+	Domain  domain          `json:"domain"`
+	Server  server          `json:"server"`
+	Dynv6   Dynv6Config     `json:"dynv6"`
+	Fwrules []DeviceFwRules `json:"fwrules"`
 }
 
 type router struct {

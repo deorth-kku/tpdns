@@ -1,5 +1,7 @@
 package tpapi
 
+import "strconv"
+
 type FwRules struct {
 	Redirect []FwRuleLine `json:"redirect"`
 }
@@ -24,6 +26,15 @@ func (s *TPSession) Getfwrules(timeout int) (rules FwRuleLine, err error) {
 	for _, line := range h.Firewall.Redirect {
 		for n, r := range line {
 			rules[n] = r
+		}
+	}
+	return
+}
+
+func (frl FwRuleLine) Search(proto string, port uint16) (name string, rule FwRule, ok bool) {
+	for n, r := range frl {
+		if r.DestPort == strconv.Itoa(int(port)) && r.Proto == proto {
+			return n, r, true
 		}
 	}
 	return
