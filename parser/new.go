@@ -29,7 +29,7 @@ func Parser(pub_zone string, ttl uint, conn tpapi.TPSession) *dns_parser {
 		ttl:               ttl,
 		resetTimer:        make(chan bool, 10),
 		eventReconnect:    make(chan dualstackips, 2),
-		eventDeviceOnline: make(chan tpapi.Device, 10),
+		eventDeviceOnline: make(chan tpapi.Device, 20),
 		needFlush:         true,
 	}
 	go gd.ttlCountdown()
