@@ -25,6 +25,7 @@ func TestPasswdEncryption(t *testing.T) {
 
 func TestGethostinfo(t *testing.T) {
 	c := getconn(t)
+	c.SetGenerateIPv6("next-terminal")
 	ds, err := c.Gethostsinfo(5)
 	if err != nil {
 		t.Error(err)
@@ -110,4 +111,15 @@ func TestAuthRetry(t *testing.T) {
 		t.Error("Getwaninfo returned empty info")
 	}
 
+}
+
+func TestGenv6(t *testing.T) {
+	v6, err := gen_v6("240e:3b7:694:54a0::", "3c:06:a7:43:d2:76")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if v6 != "240e:3b7:694:54a0:3e06:a7ff:fe43:d276" {
+		t.Errorf("generated ipv6 did not match %s", v6)
+	}
 }

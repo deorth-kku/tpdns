@@ -97,6 +97,7 @@ func main() {
 			log.Panicf("Failed to connect to router:%s\n", err)
 		}
 	}
+	c.SetGenerateIPv6(conf.Domain.GenIPv6...)
 
 	dynv6_enabled := conf.Dynv6.Token != "" && conf.Dynv6.Zone != ""
 

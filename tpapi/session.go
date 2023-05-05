@@ -10,10 +10,11 @@ import (
 )
 
 type TPSession struct {
-	site   string
-	passwd string
-	stok   string
-	apiurl string
+	site          string
+	passwd        string
+	stok          string
+	apiurl        string
+	generate_ipv6 []string
 }
 
 type loginRequest struct {
@@ -68,4 +69,8 @@ func (s *TPSession) flushstok() error {
 
 func (s *TPSession) flushapi() {
 	s.apiurl, _ = url.JoinPath(s.site, fmt.Sprintf("stok=%s/ds", s.stok))
+}
+
+func (s *TPSession) SetGenerateIPv6(names ...string) {
+	s.generate_ipv6 = append(s.generate_ipv6, names...)
 }
