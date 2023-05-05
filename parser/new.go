@@ -1,6 +1,10 @@
 package parser
 
-import "github.com/deorth-kku/tpdns/tpapi"
+import (
+	"sync"
+
+	"github.com/deorth-kku/tpdns/tpapi"
+)
 
 type dns_parser struct {
 	dns_cache         map[string]dualstackips
@@ -15,6 +19,7 @@ type dns_parser struct {
 	onReconnect       func(ipv4 string, ipv6prefix string)
 	onDeviceOnline    func(tpapi.Device)
 	needFlush         bool
+	cache_lock        sync.Mutex
 }
 
 type dualstackips struct {

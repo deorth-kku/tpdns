@@ -10,6 +10,7 @@ import (
 )
 
 func (gdata *dns_parser) flushCache() {
+	gdata.cache_lock.Lock()
 	gdata.needFlush = false
 	log.Println("started flushCache")
 	ds, err := gdata.tp_conn.ApiPost(1, tpapi.Gethostsinfodata, tpapi.Getwaninfodata)
@@ -39,6 +40,7 @@ func (gdata *dns_parser) flushCache() {
 		}
 	}
 	gdata.dns_cache = new_cache
+	gdata.cache_lock.Unlock()
 
 	if gdata.pub_ip != ds.Network.WanStatus.IPAddr {
 		gdata.pub_ip = ds.Network.WanStatus.IPAddr
@@ -49,6 +51,7 @@ func (gdata *dns_parser) flushCache() {
 		gdata.eventReconnect <- dualstackips{gdata.pub_ip, i.Prefix}
 	}
 	gdata.resetTimer <- true
+
 }
 
 func (gdata *dns_parser) ttlCountdown() {
