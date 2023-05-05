@@ -22,9 +22,10 @@ type router struct {
 }
 
 type domain struct {
-	PubZone  string `json:"public_zone_name"`
-	PrivZone string `json:"private_zone_name"`
-	TTL      uint   `json:"ttl"`
+	PubZone  string   `json:"public_zone_name"`
+	PrivZone string   `json:"private_zone_name"`
+	GenIPv6  []string `json:"generate_ipv6"`
+	TTL      uint     `json:"ttl"`
 }
 
 type server struct {
