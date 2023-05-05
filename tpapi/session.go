@@ -60,7 +60,7 @@ func (s *TPSession) flushstok() error {
 
 	}
 	if rsp.Error_code != 0 {
-		return fmt.Errorf("get token failed with %d", rsp.Error_code)
+		return fmt.Errorf("get token failed with %s", Tp_errors[rsp.Error_code])
 	}
 	s.stok = rsp.Stok
 	s.flushapi()
