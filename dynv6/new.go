@@ -10,13 +10,9 @@ import (
 	"github.com/parnurzeal/gorequest"
 )
 
-type Dynv6Zone struct {
-	session *gorequest.SuperAgent
-	zoneID  int
-}
-
-type ZoneDetails struct {
-	ID          int       `json:"id"`
+type Zone struct {
+	session     *gorequest.SuperAgent
+	ID          uint      `json:"id"`
 	Name        string    `json:"name"`
 	IPv4Address string    `json:"ipv4address"`
 	IPv6Prefix  string    `json:"ipv6prefix"`
@@ -26,7 +22,7 @@ type ZoneDetails struct {
 
 const dynv6api = "https://dynv6.com/api/v2"
 
-func New(token string, zone_name string) (zone Dynv6Zone, err error) {
+func New(token string, zone_name string) (zone Zone, err error) {
 	t := fmt.Sprintf("Bearer %s", token)
 	zone.session = gorequest.New().Set("Authorization", t)
 	zone.session.DoNotClearSuperAgent = true
@@ -44,12 +40,6 @@ func New(token string, zone_name string) (zone Dynv6Zone, err error) {
 		return
 	}
 
-	var zd ZoneDetails
-	err = json.Unmarshal([]byte(body), &zd)
-	if err != nil {
-		return
-	}
-	zone.zoneID = zd.ID
-
+	err = json.Unmarshal([]byte(body), &zone)
 	return
 }
