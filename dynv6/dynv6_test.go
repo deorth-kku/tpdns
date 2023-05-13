@@ -32,3 +32,28 @@ func TestGetRecords(t *testing.T) {
 		t.Error("No records found")
 	}
 }
+
+func TestAddUpdateDelRecord(t *testing.T) {
+	c, _ := config.ReadConf("../config.json")
+	z, err := New(c.Dynv6.Token, "deorth-moonlight.dynv6.net")
+	if err != nil {
+		t.Error(err)
+	}
+	r, err := z.AddRecord(RecordInfo{Name: "test", Data: "this is a test", Type: "TXT"})
+	if err != nil {
+		t.Error(err)
+	}
+
+	_, err = r.Update(RecordInfo{Name: "test", Data: "this is a test 2", Type: "TXT"})
+	if err != nil {
+		t.Error(err)
+	}
+	if r.Data != "this is a test 2" {
+		t.Error("failed to update struct")
+	}
+
+	err = r.Delete()
+	if err != nil {
+		t.Error(err)
+	}
+}
