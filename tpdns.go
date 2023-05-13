@@ -90,10 +90,8 @@ func updateSPF(name string, ipv4 string, ipv6prefix string, zone dynv6.Zone) {
 
 func main() {
 	var filename string
-	var logfile string
 	var h bool
 	flag.StringVar(&filename, "c", "./config.json", "Set config file")
-	flag.StringVar(&logfile, "l", "-", "Set log file")
 	flag.BoolVar(&h, "h", false, "Show help")
 	flag.Parse()
 
@@ -101,19 +99,26 @@ func main() {
 		flag.Usage()
 		os.Exit(0)
 	}
-	if logfile != "-" {
-		file, err := os.OpenFile(logfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+
+	conf, err := config.ReadConf(filename)
+	if err != nil {
+		log.Panicf("failed to read config file : %s, error: %s\n", filename, err)
+	}
+
+	if conf.Log.File != "" {
+		file, err := os.OpenFile(conf.Log.File, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 		if err != nil {
 			log.Fatal(err)
 		}
 		log.SetOutput(file)
 		defer file.Close()
 	}
-
-	conf, err := config.ReadConf(filename)
-	if err != nil {
-		log.Panicf("failed to read config file : %s, error: %s\n", filename, err)
+	if conf.Log.Systemd {
+		log.SetFlags(log.Llongfile)
+	} else {
+		log.SetFlags(log.LstdFlags | log.Lmicroseconds | log.Llongfile)
 	}
+
 	var c tpapi.TPSession
 	if conf.Router.Stok != "" {
 		c = tpapi.TPSessionStok(conf.Router.Url, conf.Router.Stok)

@@ -12,6 +12,7 @@ type tpdnsConfig struct {
 	Server  server          `json:"server"`
 	Dynv6   Dynv6Config     `json:"dynv6"`
 	Fwrules []DeviceFwRules `json:"fwrules"`
+	Log     LogConfig       `json:"log"`
 }
 
 type router struct {
