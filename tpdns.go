@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/deorth-kku/tpdns/config"
 	"github.com/deorth-kku/tpdns/dynv6"
@@ -39,7 +40,7 @@ func update_rules_for_dev(dev tpapi.Device, c tpapi.TPSession, conf_rules []conf
 				if !ok {
 					err = c.AddFwRule(1, conf_rule.Port, dev.IP, dev.IPv6, conf_rule.Proto)
 					if err != nil {
-						log.Printf("failed to add new rule %d %s, %s", conf_rule.Port, conf_rule.Proto, err)
+						log.Printf("failed to add new rule %d %s, %s\n", conf_rule.Port, conf_rule.Proto, err)
 					}
 					continue
 				}
@@ -48,17 +49,42 @@ func update_rules_for_dev(dev tpapi.Device, c tpapi.TPSession, conf_rules []conf
 				}
 				err = c.DelFwRule(1, name)
 				if err != nil {
-					log.Printf("failed to delete old rule %d %s, %s", conf_rule.Port, conf_rule.Proto, err)
+					log.Printf("failed to delete old rule %d %s, %s\n", conf_rule.Port, conf_rule.Proto, err)
 				} else {
-					log.Printf("deleted old rule %d %s", conf_rule.Port, conf_rule.Proto)
+					log.Printf("deleted old rule %d %s\n", conf_rule.Port, conf_rule.Proto)
 				}
 				err = c.AddFwRule(1, conf_rule.Port, dev.IP, dev.IPv6, conf_rule.Proto)
 				if err != nil {
-					log.Printf("failed to add new rule %d %s, %s", conf_rule.Port, conf_rule.Proto, err)
+					log.Printf("failed to add new rule %d %s, %s\n", conf_rule.Port, conf_rule.Proto, err)
 				}
 			}
 
 		}
+	}
+}
+
+func updateSPF(name string, ipv4 string, ipv6prefix string, zone dynv6.Zone) {
+	rs, err := zone.GetRecords()
+	if err != nil {
+		log.Printf("failed to get records for zone %d\n", zone.ID)
+		return
+	}
+	new_data := fmt.Sprintf("v=spf1 ip4:%s ip6:%s -all", ipv4, ipv6prefix)
+	req := dynv6.RecordInfo{Name: name, Data: new_data, Type: "TXT"}
+	for _, r := range rs {
+		if r.Type == "TXT" && r.Name == name && strings.HasPrefix(r.Data, "v=spf1") {
+			log.Println("updating spf")
+			_, err := r.Update(req)
+			if err != nil {
+				log.Printf("failed to update spf record, %s\n", err)
+			}
+			return
+		}
+	}
+	log.Println("no spf found, adding")
+	_, err = zone.AddRecord(req)
+	if err != nil {
+		log.Printf("failed to add spf record, %s\n", err)
 	}
 }
 
@@ -110,14 +136,19 @@ func main() {
 	}
 
 	dp := parser.Parser(conf.Domain.PubZone, conf.Domain.TTL, c)
-	dp.SetOnReconnect(func(ipv4 string, ipv6 string) {
-		log.Printf("reconnected with ipv4: %s, ipv6: %s\n", ipv4, ipv6)
+	dp.SetOnReconnect(func(ipv4 string, ipv6prefix string) {
+		log.Printf("reconnected with ipv4: %s, ipv6: %s\n", ipv4, ipv6prefix)
 		if dynv6_enabled {
+			ipv6 := strings.Split(ipv6prefix, "/")[0]
 			_, err := d.Update(ipv4, ipv6)
 			if err != nil {
 				log.Printf("failed to update dynv6 zone, %s", err)
 			}
+			if conf.Dynv6.SPF.Enabled {
+				updateSPF(conf.Dynv6.SPF.Name, ipv4, ipv6prefix, d)
+			}
 		}
+
 		devs, err := c.Gethostsinfo(1)
 		if err != nil {
 			log.Printf("failed to Gethostsinfo: %s\n", err)

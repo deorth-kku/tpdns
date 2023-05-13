@@ -12,7 +12,7 @@ func TestUpdateZone(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	_, err = z.Update("192.168.101.1", "fe80::1")
+	_, err = z.Update("192.168.101.1", "fe80::")
 	if err != nil {
 		t.Error(err)
 	}
