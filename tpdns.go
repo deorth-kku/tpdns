@@ -101,7 +101,7 @@ func main() {
 
 	dynv6_enabled := conf.Dynv6.Token != "" && conf.Dynv6.Zone != ""
 
-	var d dynv6.Dynv6Zone
+	var d dynv6.Zone
 	if dynv6_enabled {
 		d, err = dynv6.New(conf.Dynv6.Token, conf.Dynv6.Zone)
 		if err != nil {

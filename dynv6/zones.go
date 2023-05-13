@@ -7,23 +7,13 @@ import (
 	"net/url"
 )
 
-type error422 struct {
-	errorinfo
-	Fields []errorinfo `json:"fields"`
-}
-
-type errorinfo struct {
-	Name    string `json:"name"`
-	Message string `json:"message"`
-}
-
 type UpdatePayload struct {
 	IPv4Address string `json:"ipv4address"`
 	IPv6Prefix  string `json:"ipv6prefix"`
 }
 
-func (z *Dynv6Zone) Update(ipv4address string, ipv6prefix string) (zd ZoneDetails, err error) {
-	url, err := url.JoinPath(dynv6api, fmt.Sprintf("zones/%d", z.zoneID))
+func (z *Zone) Update(ipv4address string, ipv6prefix string) (zd Zone, err error) {
+	url, err := url.JoinPath(dynv6api, fmt.Sprintf("zones/%d", z.ID))
 	if err != nil {
 		return
 	}
