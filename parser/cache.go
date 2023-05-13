@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"log"
 	"net/url"
 	"strings"
@@ -48,7 +49,7 @@ func (gdata *dns_parser) flushCache() {
 		if err != nil {
 			log.Printf("failed to get lanv6info")
 		}
-		gdata.eventReconnect <- dualstackips{gdata.pub_ip, i.Prefix}
+		gdata.eventReconnect <- dualstackips{gdata.pub_ip, fmt.Sprintf("%s/%s", i.Prefix, i.Prefixlen)}
 	}
 	gdata.resetTimer <- true
 
