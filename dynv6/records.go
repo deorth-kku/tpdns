@@ -11,13 +11,13 @@ import (
 
 type Record struct {
 	session *gorequest.SuperAgent
-	ReqRecord
+	RecordInfo
 	ExpandedData string `json:"expandedData"`
 	ID           uint   `json:"id"`
 	ZoneID       uint   `json:"zoneID"`
 }
 
-type ReqRecord struct {
+type RecordInfo struct {
 	Name     string `json:"name"`
 	Priority uint16 `json:"priority"`
 	Port     uint16 `json:"port"`
@@ -38,14 +38,91 @@ func (z *Zone) GetRecords() (records []Record, err error) {
 		err = errs[0]
 		return
 	}
-	switch resp.StatusCode {
-	case 200:
+	if resp.StatusCode == 200 {
 		err = json.Unmarshal([]byte(body), &records)
-	default:
+		for i := range records {
+			records[i].session = z.session
+		}
+	} else {
 		err = fmt.Errorf("api return with error: %s", http.StatusText(resp.StatusCode))
 	}
-	for i := range records {
-		records[i].session = z.session
+
+	return
+}
+
+func (z *Zone) AddRecord(info RecordInfo) (record Record, err error) {
+	url, err := url.JoinPath(dynv6api, fmt.Sprintf("zones/%d/records", z.ID))
+	if err != nil {
+		return
+	}
+	resp, body, errs := z.session.Post(url).
+		Send(info).
+		End()
+	if len(errs) != 0 {
+		err = errs[0]
+		return
+	}
+	if resp.StatusCode == 200 {
+		err = json.Unmarshal([]byte(body), &record)
+		record.session = z.session
+	} else {
+		err = fmt.Errorf("api return with error: %s", http.StatusText(resp.StatusCode))
+	}
+	return
+}
+
+func (r *Record) GetRecord(info RecordInfo) (record Record, err error) {
+	url, err := url.JoinPath(dynv6api, fmt.Sprintf("zones/%d/records/%d", r.ZoneID, r.ID))
+	if err != nil {
+		return
+	}
+	resp, body, errs := r.session.Get(url).End()
+	if len(errs) != 0 {
+		err = errs[0]
+		return
+	}
+	if resp.StatusCode == 200 {
+		err = json.Unmarshal([]byte(body), r)
+		record = *r
+	} else {
+		err = fmt.Errorf("api return with error: %s", http.StatusText(resp.StatusCode))
+	}
+	return
+}
+
+func (r *Record) Update(info RecordInfo) (record Record, err error) {
+	url, err := url.JoinPath(dynv6api, fmt.Sprintf("zones/%d/records/%d", r.ZoneID, r.ID))
+	if err != nil {
+		return
+	}
+	resp, body, errs := r.session.Patch(url).
+		Send(info).
+		End()
+	if len(errs) != 0 {
+		err = errs[0]
+		return
+	}
+	if resp.StatusCode == 200 {
+		err = json.Unmarshal([]byte(body), r)
+		record = *r
+	} else {
+		err = fmt.Errorf("api return with error: %s", http.StatusText(resp.StatusCode))
+	}
+	return
+}
+
+func (r *Record) Delete() (err error) {
+	url, err := url.JoinPath(dynv6api, fmt.Sprintf("zones/%d/records/%d", r.ZoneID, r.ID))
+	if err != nil {
+		return
+	}
+	resp, _, errs := r.session.Delete(url).End()
+	if len(errs) != 0 {
+		err = errs[0]
+		return
+	}
+	if resp.StatusCode != 204 {
+		err = fmt.Errorf("api return with error: %s", http.StatusText(resp.StatusCode))
 	}
 	return
 }
