@@ -18,7 +18,6 @@ func (gdata *dns_parser) parseQuery(m *dns.Msg) {
 		if gdata.needFlush || (!ok && !flushed) {
 			log.Printf("%s not found in cache or cache outdated\n", device_name)
 			gdata.flushCache()
-			log.Print("finished flushCache \n")
 			flushed = true
 		}
 

@@ -17,41 +17,43 @@ func (gdata *dns_parser) flushCache() {
 	ds, err := gdata.tp_conn.ApiPost(1, tpapi.Gethostsinfodata, tpapi.Getwaninfodata)
 	if err != nil {
 		log.Printf("failed to get hosts info: %s\n", err)
-	}
+	} else {
+		new_cache := make(map[string]dualstackips, 0)
+		for _, line := range ds.HostsInfo.HostInfo {
+			for _, info := range line {
+				host, err := url.QueryUnescape(info.Hostname)
+				host = strings.ToLower(host)
+				host = strings.ReplaceAll(host, " ", "-")
+				if err != nil {
+					log.Printf("failed to unescape hostname: %s", info.Hostname)
+				}
+				if host == "" {
+					continue
+				}
+				ips := dualstackips{info.IP, info.IPv6}
+				new_cache[host] = ips
 
-	new_cache := make(map[string]dualstackips, 0)
-	for _, line := range ds.HostsInfo.HostInfo {
-		for _, info := range line {
-			host, err := url.QueryUnescape(info.Hostname)
-			host = strings.ToLower(host)
-			host = strings.ReplaceAll(host, " ", "-")
+				if _, ok := gdata.dns_cache[host]; !ok {
+					//device without a name wont be sent, for now
+					gdata.eventDeviceOnline <- info
+				}
+			}
+		}
+
+		gdata.dns_cache = new_cache
+
+		if ds.Network.WanStatus.IPAddr != "" && gdata.pub_ip != ds.Network.WanStatus.IPAddr {
+			gdata.pub_ip = ds.Network.WanStatus.IPAddr
+			i, err := gdata.tp_conn.Getlanv6info(1)
 			if err != nil {
-				log.Printf("failed to unescape hostname: %s", info.Hostname)
+				log.Printf("failed to get lanv6info")
 			}
-			if host == "" {
-				continue
-			}
-			ips := dualstackips{info.IP, info.IPv6}
-			new_cache[host] = ips
-
-			if _, ok := gdata.dns_cache[host]; !ok {
-				//device without a name wont be sent, for now
-				gdata.eventDeviceOnline <- info
-			}
+			gdata.eventReconnect <- dualstackips{gdata.pub_ip, fmt.Sprintf("%s/%s", i.Prefix, i.Prefixlen)}
 		}
+		gdata.resetTimer <- true
 	}
-	gdata.dns_cache = new_cache
+	log.Println("finished flushCache")
 	gdata.cache_lock.Unlock()
-
-	if gdata.pub_ip != ds.Network.WanStatus.IPAddr {
-		gdata.pub_ip = ds.Network.WanStatus.IPAddr
-		i, err := gdata.tp_conn.Getlanv6info(1)
-		if err != nil {
-			log.Printf("failed to get lanv6info")
-		}
-		gdata.eventReconnect <- dualstackips{gdata.pub_ip, fmt.Sprintf("%s/%s", i.Prefix, i.Prefixlen)}
-	}
-	gdata.resetTimer <- true
 
 }
 
