@@ -14,7 +14,7 @@ func (gdata *dns_parser) flushCache() {
 	gdata.cache_lock.Lock()
 	gdata.needFlush = false
 	log.Println("started flushCache")
-	ds, err := gdata.tp_conn.ApiPost(1, tpapi.Gethostsinfodata, tpapi.Getwaninfodata)
+	ds, err := gdata.tp_conn.ApiPost(1, tpapi.Gethostsinfodata, tpapi.Getwanlanv6infodata)
 	if err != nil {
 		log.Printf("failed to get hosts info: %s\n", err)
 	} else {
@@ -42,13 +42,13 @@ func (gdata *dns_parser) flushCache() {
 
 		gdata.dns_cache = new_cache
 
-		if ds.Network.WanStatus.IPAddr != "" && gdata.pub_ip != ds.Network.WanStatus.IPAddr {
-			gdata.pub_ip = ds.Network.WanStatus.IPAddr
-			i, err := gdata.tp_conn.Getlanv6info(1)
+		ipv6prefix := fmt.Sprintf("%s/%s", ds.Network.Lanv6Status.Prefix, ds.Network.Lanv6Status.Prefixlen)
+		if (ds.Network.WanStatus.IPAddr != "" && gdata.pub_ip.IPv4 != ds.Network.WanStatus.IPAddr) || ipv6prefix != gdata.pub_ip.IPv6 {
 			if err != nil {
 				log.Printf("failed to get lanv6info")
 			}
-			gdata.eventReconnect <- dualstackips{gdata.pub_ip, fmt.Sprintf("%s/%s", i.Prefix, i.Prefixlen)}
+			gdata.pub_ip = dualstackips{ds.Network.WanStatus.IPAddr, ipv6prefix}
+			gdata.eventReconnect <- gdata.pub_ip
 		}
 		gdata.resetTimer <- true
 	}

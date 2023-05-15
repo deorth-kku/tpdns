@@ -11,6 +11,7 @@ type Lanv6Info struct {
 }
 
 const Getlanv6infodata = `{"network":{"name":"lanv6_status"},"method":"get"}`
+const Getwanlanv6infodata = `{"network": {"name": ["wan_status","lanv6_status"]},"method": "get"}`
 
 func (s *TPSession) Getlanv6info(timeout int) (info Lanv6Info, err error) {
 	rsp, err := s.ApiPost(timeout, Getlanv6infodata)

@@ -9,7 +9,7 @@ import (
 type dns_parser struct {
 	dns_cache         map[string]dualstackips
 	tp_conn           tpapi.TPSession
-	pub_ip            string
+	pub_ip            dualstackips
 	pub_zone_name     string
 	ttl               uint
 	countdown         uint
