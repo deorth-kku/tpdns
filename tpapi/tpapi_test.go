@@ -123,3 +123,18 @@ func TestGenv6(t *testing.T) {
 		t.Errorf("generated ipv6 did not match %s", v6)
 	}
 }
+
+func TestGetwanLanv6(t *testing.T) {
+	c := getconn(t)
+	i, err := c.ApiPost(1, Getwanlanv6infodata)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if i.Network.WanStatus.IPAddr == "" {
+		t.Error("failed to get ipv4 wan")
+	}
+	if i.Network.Lanv6Status.Ip6addr == "" {
+		t.Error("failed to get ipv6 lan")
+	}
+}

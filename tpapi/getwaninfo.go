@@ -1,6 +1,5 @@
 package tpapi
 
-
 type WanInfo struct {
 	IPAddr     string `json:"ipaddr"`
 	Netmask    string `json:"netmask"`

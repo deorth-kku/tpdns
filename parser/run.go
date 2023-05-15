@@ -34,7 +34,7 @@ func (gdata *dns_parser) parseQuery(m *dns.Msg) {
 		case dns.TypeA:
 			rr_type = "A"
 			if strings.HasSuffix(q.Name, gdata.pub_zone_name) {
-				ip = gdata.pub_ip
+				ip = gdata.pub_ip.IPv4
 			} else {
 				ip = ips.IPv4
 			}

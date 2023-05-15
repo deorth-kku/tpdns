@@ -145,6 +145,9 @@ func main() {
 		log.Printf("reconnected with ipv4: %s, ipv6: %s\n", ipv4, ipv6prefix)
 		if dynv6_enabled {
 			ipv6 := strings.Split(ipv6prefix, "/")[0]
+			if ipv6 == "::" {
+				ipv6 = ""
+			}
 			_, err := d.Update(ipv4, ipv6)
 			if err != nil {
 				log.Printf("failed to update dynv6 zone, %s", err)
