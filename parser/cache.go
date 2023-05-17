@@ -10,13 +10,13 @@ import (
 	"github.com/deorth-kku/tpdns/tpapi"
 )
 
-func (gdata *dns_parser) flushCache() {
+func (gdata *dns_parser) flushCache(event_enabled bool) {
 	gdata.cache_lock.Lock()
 	gdata.needFlush = false
 	log.Println("started flushCache")
 	ds, err := gdata.tp_conn.ApiPost(1, tpapi.Gethostsinfodata, tpapi.Getwanlanv6infodata)
 	if err != nil {
-		log.Printf("failed to get hosts info: %s\n", err)
+		log.Printf("failed to flush cache: %s\n", err)
 	} else {
 		new_cache := make(map[string]dualstackips, 0)
 		for _, line := range ds.HostsInfo.HostInfo {
@@ -33,7 +33,7 @@ func (gdata *dns_parser) flushCache() {
 				ips := dualstackips{info.IP, info.IPv6}
 				new_cache[host] = ips
 
-				if _, ok := gdata.dns_cache[host]; !ok {
+				if _, ok := gdata.dns_cache[host]; !ok && event_enabled {
 					//device without a name wont be sent, for now
 					gdata.eventDeviceOnline <- info
 				}
@@ -44,15 +44,16 @@ func (gdata *dns_parser) flushCache() {
 
 		ipv6prefix := fmt.Sprintf("%s/%s", ds.Network.Lanv6Status.Prefix, ds.Network.Lanv6Status.Prefixlen)
 		if (ds.Network.WanStatus.IPAddr != "" && gdata.pub_ip.IPv4 != ds.Network.WanStatus.IPAddr) || ipv6prefix != gdata.pub_ip.IPv6 {
-			if err != nil {
-				log.Printf("failed to get lanv6info")
-			}
 			gdata.pub_ip = dualstackips{ds.Network.WanStatus.IPAddr, ipv6prefix}
-			gdata.eventReconnect <- gdata.pub_ip
+			if event_enabled {
+				gdata.eventReconnect <- gdata.pub_ip
+			}
+
 		}
 		gdata.resetTimer <- true
+		log.Println("finished flushCache")
 	}
-	log.Println("finished flushCache")
+
 	gdata.cache_lock.Unlock()
 
 }
