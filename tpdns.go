@@ -21,8 +21,10 @@ func update_rules_for_dev(dev tpapi.Device, c tpapi.TPSession, conf_rules []conf
 		log.Printf("not unescapable device name %s\n", dev.Hostname)
 		devname = dev.Hostname
 	}
-	if !onconnect {
-		log.Printf("new device online %s\n", devname)
+	if onconnect {
+		log.Printf("init device on connect: %s\n", devname)
+	} else {
+		log.Printf("new device online: %s\n", devname)
 	}
 
 	for _, conf_dev := range conf_rules {
@@ -142,7 +144,7 @@ func main() {
 
 	dp := parser.Parser(conf.Domain.PubZone, conf.Domain.TTL, c)
 	dp.SetOnReconnect(func(ipv4 string, ipv6prefix string) {
-		log.Printf("reconnected with ipv4: %s, ipv6: %s\n", ipv4, ipv6prefix)
+		log.Printf("reconnected with ipv4: %s, ipv6prefix: %s\n", ipv4, ipv6prefix)
 		if dynv6_enabled {
 			ipv6 := strings.Split(ipv6prefix, "/")[0]
 			if ipv6 == "::" {
