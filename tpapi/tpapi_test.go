@@ -114,7 +114,7 @@ func TestAuthRetry(t *testing.T) {
 }
 
 func TestGenv6(t *testing.T) {
-	v6, err := gen_v6("240e:3b7:694:54a0::", "3c:06:a7:43:d2:76")
+	v6, err := Gen_v6("240e:3b7:694:54a0::", "3c:06:a7:43:d2:76")
 	if err != nil {
 		t.Error(err)
 		return

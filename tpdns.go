@@ -159,12 +159,7 @@ func main() {
 			}
 		}
 
-		devs, err := c.Gethostsinfo(1)
-		if err != nil {
-			log.Printf("failed to Gethostsinfo: %s\n", err)
-			return
-		}
-		for _, dev := range devs {
+		for _, dev := range dp.ReadCache() {
 			update_rules_for_dev(dev, c, conf.Fwrules, true)
 		}
 

@@ -5,6 +5,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/deorth-kku/tpdns/tpapi"
 	"github.com/miekg/dns"
 )
 
@@ -14,14 +15,14 @@ func (gdata *dns_parser) parseQuery(m *dns.Msg) {
 		device_name := strings.Split(q.Name, ".")[0]
 		device_name = strings.ToLower(device_name)
 
-		ips, ok := gdata.dns_cache[device_name]
+		device, ok := gdata.dns_cache[device_name]
 		if gdata.needFlush || (!ok && !flushed) {
 			log.Printf("%s not found in cache or cache outdated\n", device_name)
 			gdata.flushCache(true)
 			flushed = true
 		}
 
-		ips, ok = gdata.dns_cache[device_name]
+		device, ok = gdata.dns_cache[device_name]
 		if !ok {
 			log.Printf("failed to find %s in cache", device_name)
 			m.Rcode = dns.RcodeNameError
@@ -36,11 +37,16 @@ func (gdata *dns_parser) parseQuery(m *dns.Msg) {
 			if strings.HasSuffix(q.Name, gdata.pub_zone_name) {
 				ip = gdata.pub_ip.IPv4
 			} else {
-				ip = ips.IPv4
+				ip = device.IP
 			}
 		case dns.TypeAAAA:
 			rr_type = "AAAA"
-			ip = ips.IPv6
+			if strings.HasSuffix(q.Name, gdata.pub_zone_name) {
+				ip = device.IPv6
+			} else {
+				ip, _ = tpapi.Gen_v6("fe80::", device.MAC)
+			}
+
 			if ip == "::" {
 				log.Printf("skipping AAAA for %s because it doesn't have ipv6", device_name)
 				continue

@@ -76,7 +76,7 @@ func (s *TPSession) apiPost(timeout int, data ...any) (rsp TPResponse, err error
 				if !slices.Contains(s.generate_ipv6, devname) {
 					continue
 				}
-				gened_v6, err := gen_v6(prefix, host.MAC)
+				gened_v6, err := Gen_v6(prefix, host.MAC)
 				if err != nil {
 					continue
 				}
@@ -93,7 +93,7 @@ func (r *TPResponse) update_v6(i int, j string, ipv6 string) {
 	r.HostsInfo.HostInfo[i][j] = m
 }
 
-func gen_v6(prefix string, macAddr string) (v6 string, err error) {
+func Gen_v6(prefix string, macAddr string) (v6 string, err error) {
 	macAddr = strings.Replace(macAddr, "-", ":", 5)
 	// Parse the MAC address string
 	mac, err := net.ParseMAC(macAddr)

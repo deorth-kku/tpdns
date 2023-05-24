@@ -7,7 +7,7 @@ import (
 )
 
 type dns_parser struct {
-	dns_cache         map[string]dualstackips
+	dns_cache         map[string]tpapi.Device
 	tp_conn           tpapi.TPSession
 	pub_ip            dualstackips
 	pub_zone_name     string
@@ -35,7 +35,6 @@ func Parser(pub_zone string, ttl uint, conn tpapi.TPSession) *dns_parser {
 		resetTimer:        make(chan bool, 10),
 		eventReconnect:    make(chan dualstackips, 2),
 		eventDeviceOnline: make(chan tpapi.Device, 20),
-		needFlush:         true,
 	}
 	gd.flushCache(false)
 	go gd.ttlCountdown()
