@@ -10,6 +10,10 @@ import (
 	"github.com/deorth-kku/tpdns/tpapi"
 )
 
+func (dp *dns_parser) ReadCache() map[string]tpapi.Device {
+	return dp.dns_cache
+}
+
 func (gdata *dns_parser) flushCache(event_enabled bool) {
 	gdata.cache_lock.Lock()
 	gdata.needFlush = false
@@ -18,7 +22,7 @@ func (gdata *dns_parser) flushCache(event_enabled bool) {
 	if err != nil {
 		log.Printf("failed to flush cache: %s\n", err)
 	} else {
-		new_cache := make(map[string]dualstackips, 0)
+		new_cache := make(map[string]tpapi.Device, 0)
 		for _, line := range ds.HostsInfo.HostInfo {
 			for _, info := range line {
 				host, err := url.QueryUnescape(info.Hostname)
@@ -30,8 +34,7 @@ func (gdata *dns_parser) flushCache(event_enabled bool) {
 				if host == "" {
 					continue
 				}
-				ips := dualstackips{info.IP, info.IPv6}
-				new_cache[host] = ips
+				new_cache[host] = info
 
 				if _, ok := gdata.dns_cache[host]; !ok && event_enabled {
 					//device without a name wont be sent, for now
