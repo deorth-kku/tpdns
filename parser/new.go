@@ -3,15 +3,16 @@ package parser
 import (
 	"sync"
 
+	"github.com/deorth-kku/tpdns/config"
 	"github.com/deorth-kku/tpdns/tpapi"
 )
 
 type dns_parser struct {
+	Conf      *config.TpdnsConfig
+	TpSession *tpapi.TPSession
+
 	dns_cache         map[string]tpapi.Device
-	tp_conn           tpapi.TPSession
 	pub_ip            dualstackips
-	pub_zone_name     string
-	ttl               uint
 	countdown         uint
 	resetTimer        chan bool
 	eventReconnect    chan dualstackips
@@ -27,11 +28,10 @@ type dualstackips struct {
 	IPv6 string
 }
 
-func Parser(pub_zone string, ttl uint, conn tpapi.TPSession) *dns_parser {
+func Parser(conf *config.TpdnsConfig, conn *tpapi.TPSession) *dns_parser {
 	gd := &dns_parser{
-		tp_conn:           conn,
-		pub_zone_name:     pub_zone,
-		ttl:               ttl,
+		Conf:              conf,
+		TpSession:         conn,
 		resetTimer:        make(chan bool, 10),
 		eventReconnect:    make(chan dualstackips, 2),
 		eventDeviceOnline: make(chan tpapi.Device, 20),

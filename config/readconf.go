@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-type tpdnsConfig struct {
+type TpdnsConfig struct {
 	Router  router          `json:"router"`
 	Domain  domain          `json:"domain"`
 	Server  server          `json:"server"`
@@ -23,10 +23,11 @@ type router struct {
 }
 
 type domain struct {
-	PubZone  string   `json:"public_zone_name"`
-	PrivZone string   `json:"private_zone_name"`
-	GenIPv6  []string `json:"generate_ipv6"`
-	TTL      uint     `json:"ttl"`
+	PubZone            string   `json:"public_zone_name"`
+	PrivZone           string   `json:"private_zone_name"`
+	PrivZoneGlobalIPv6 bool     `json:"private_zone_global_ipv6"`
+	GenIPv6            []string `json:"generate_ipv6"`
+	TTL                uint     `json:"ttl"`
 }
 
 type server struct {
@@ -34,8 +35,8 @@ type server struct {
 	Port uint16 `json:"port"`
 }
 
-func ReadConf(filename string) (c tpdnsConfig, err error) {
-	c = tpdnsConfig{
+func ReadConf(filename string) (c *TpdnsConfig, err error) {
+	c = &TpdnsConfig{
 		Domain: domain{TTL: 60},
 		Server: server{Port: 53},
 	}
