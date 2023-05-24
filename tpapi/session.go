@@ -31,14 +31,14 @@ type loginRsp struct {
 	Stok       string `json:"stok"`
 }
 
-func TPSessionStok(site string, stok string) (session TPSession) {
-	session = TPSession{site: site, stok: stok}
+func TPSessionStok(site string, stok string) (session *TPSession) {
+	session = &TPSession{site: site, stok: stok}
 	session.flushapi()
 	return
 }
 
-func TPSessionPasswd(site string, passwd string) (session TPSession, err error) {
-	session = TPSession{site: site, passwd: passwdEncryption(passwd)}
+func TPSessionPasswd(site string, passwd string) (session *TPSession, err error) {
+	session = &TPSession{site: site, passwd: passwdEncryption(passwd)}
 	err = session.flushstok()
 	return
 }

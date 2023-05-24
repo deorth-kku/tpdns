@@ -18,7 +18,7 @@ func (gdata *dns_parser) flushCache(event_enabled bool) {
 	gdata.cache_lock.Lock()
 	gdata.needFlush = false
 	log.Println("started flushCache")
-	ds, err := gdata.tp_conn.ApiPost(1, tpapi.Gethostsinfodata, tpapi.Getwanlanv6infodata)
+	ds, err := gdata.TpSession.ApiPost(1, tpapi.Gethostsinfodata, tpapi.Getwanlanv6infodata)
 	if err != nil {
 		log.Printf("failed to flush cache: %s\n", err)
 	} else {
@@ -62,17 +62,17 @@ func (gdata *dns_parser) flushCache(event_enabled bool) {
 }
 
 func (gdata *dns_parser) ttlCountdown() {
-	if gdata.ttl == 0 {
+	if gdata.Conf.Domain.TTL == 0 {
 		return
 	}
-	gdata.countdown = gdata.ttl
+	gdata.countdown = gdata.Conf.Domain.TTL
 
 	// Loop until interrupted
 	for {
 		// Check if the timer has reached zero
 		if gdata.countdown == 0 {
 			gdata.needFlush = true
-			gdata.countdown = gdata.ttl
+			gdata.countdown = gdata.Conf.Domain.TTL
 		}
 		// Wait for one second
 		time.Sleep(time.Second)
@@ -84,7 +84,7 @@ func (gdata *dns_parser) ttlCountdown() {
 				<-gdata.resetTimer
 			}
 			log.Println("countdown reset")
-			gdata.countdown = gdata.ttl
+			gdata.countdown = gdata.Conf.Domain.TTL
 		default:
 			gdata.countdown--
 		}

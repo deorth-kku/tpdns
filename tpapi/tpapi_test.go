@@ -6,7 +6,7 @@ import (
 	"github.com/deorth-kku/tpdns/config"
 )
 
-func getconn(t *testing.T) TPSession {
+func getconn(t *testing.T) *TPSession {
 	conf, err := config.ReadConf("../config.json")
 	if err != nil {
 		t.Error(err)

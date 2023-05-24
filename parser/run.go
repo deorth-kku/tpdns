@@ -34,23 +34,23 @@ func (gdata *dns_parser) parseQuery(m *dns.Msg) {
 		switch q.Qtype {
 		case dns.TypeA:
 			rr_type = "A"
-			if strings.HasSuffix(q.Name, gdata.pub_zone_name) {
+			if strings.HasSuffix(q.Name, gdata.Conf.Domain.PubZone) {
 				ip = gdata.pub_ip.IPv4
 			} else {
 				ip = device.IP
 			}
 		case dns.TypeAAAA:
 			rr_type = "AAAA"
-			if strings.HasSuffix(q.Name, gdata.pub_zone_name) {
+			if gdata.Conf.Domain.PrivZoneGlobalIPv6 || strings.HasSuffix(q.Name, gdata.Conf.Domain.PubZone) {
+				if ip == "::" {
+					log.Printf("skipping AAAA for %s because it doesn't have ipv6", device_name)
+					continue
+				}
 				ip = device.IPv6
 			} else {
 				ip, _ = tpapi.Gen_v6("fe80::", device.MAC)
 			}
 
-			if ip == "::" {
-				log.Printf("skipping AAAA for %s because it doesn't have ipv6", device_name)
-				continue
-			}
 		}
 
 		log.Printf("Query for %s %s\n", q.Name, rr_type)

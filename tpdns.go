@@ -15,7 +15,7 @@ import (
 	"github.com/miekg/dns"
 )
 
-func update_rules_for_dev(dev tpapi.Device, c tpapi.TPSession, conf_rules []config.DeviceFwRules, onconnect bool) {
+func update_rules_for_dev(dev tpapi.Device, c *tpapi.TPSession, conf_rules []config.DeviceFwRules, onconnect bool) {
 	devname, err := url.QueryUnescape(dev.Hostname)
 	if err != nil {
 		log.Printf("not unescapable device name %s\n", dev.Hostname)
@@ -121,7 +121,7 @@ func main() {
 		log.SetFlags(log.LstdFlags | log.Lmicroseconds | log.Llongfile)
 	}
 
-	var c tpapi.TPSession
+	var c *tpapi.TPSession
 	if conf.Router.Stok != "" {
 		c = tpapi.TPSessionStok(conf.Router.Url, conf.Router.Stok)
 	} else {
@@ -142,7 +142,7 @@ func main() {
 		}
 	}
 
-	dp := parser.Parser(conf.Domain.PubZone, conf.Domain.TTL, c)
+	dp := parser.Parser(conf, c)
 	dp.SetOnReconnect(func(ipv4 string, ipv6prefix string) {
 		log.Printf("reconnected with ipv4: %s, ipv6prefix: %s\n", ipv4, ipv6prefix)
 		if dynv6_enabled {
