@@ -135,7 +135,7 @@ func main() {
 	for i, z := range conf.Dynv6 {
 		d, err := dynv6.New(z.Token, z.Zone)
 		if err != nil {
-			log.Panicf("failed to connect to dynv6 on %s: %s\n", z.Zone, err)
+			log.Printf("failed to connect to dynv6 on %s: %s\n", z.Zone, err)
 		} else {
 			zones[i] = d
 		}
