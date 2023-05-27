@@ -96,6 +96,7 @@ func (dp *dns_parser) parsePtrQuery(m *dns.Msg) {
 			log.Printf("unsupported name for PTR: %s", q.Name)
 			continue
 		}
+		m.RecursionAvailable = true
 		reverse_ip := strings.TrimSuffix(q.Name, PtrSuffix)
 		reverse_ip_slice := strings.Split(reverse_ip, ".")
 		if len(reverse_ip_slice) != 5 {
@@ -113,9 +114,12 @@ func (dp *dns_parser) parsePtrQuery(m *dns.Msg) {
 					} else {
 						log.Panic(err)
 					}
-					break
+					return
 				}
 			}
+			log.Printf("failed to find %s in cache", ip)
+			m.Rcode = dns.RcodeNameError
+			return
 		}
 	}
 }
