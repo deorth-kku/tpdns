@@ -31,7 +31,7 @@ func (gdata *dns_parser) flushCache(event_enabled bool) {
 				if err != nil {
 					log.Printf("failed to unescape hostname: %s", info.Hostname)
 				}
-				if host == "" {
+				if host == "" || info.Blocked == "1" {
 					continue
 				}
 				new_cache[host] = info
