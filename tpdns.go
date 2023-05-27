@@ -175,6 +175,7 @@ func main() {
 	// attach request handler func
 	dns.HandleFunc(conf.Domain.PrivZone, dp.HandleDnsRequest)
 	dns.HandleFunc(conf.Domain.PubZone, dp.HandleDnsRequest)
+	dns.HandleFunc(parser.PtrSuffix, dp.HandlePtrRequest)
 
 	addr := fmt.Sprintf("%s:%d", conf.Server.IP, conf.Server.Port)
 	server := &dns.Server{Addr: addr, Net: "udp"}
