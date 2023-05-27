@@ -8,7 +8,7 @@ import (
 
 func TestUpdateZone(t *testing.T) {
 	c, _ := config.ReadConf("../config.json")
-	z, err := New(c.Dynv6.Token, "deorth-moonlight.dynv6.net")
+	z, err := New(c.Dynv6[0].Token, "deorth-moonlight.dynv6.net")
 	if err != nil {
 		t.Error(err)
 	}
@@ -20,7 +20,7 @@ func TestUpdateZone(t *testing.T) {
 
 func TestGetRecords(t *testing.T) {
 	c, _ := config.ReadConf("../config.json")
-	z, err := New(c.Dynv6.Token, "deorth-moonlight.dynv6.net")
+	z, err := New(c.Dynv6[0].Token, "deorth-moonlight.dynv6.net")
 	if err != nil {
 		t.Error(err)
 	}
@@ -35,7 +35,7 @@ func TestGetRecords(t *testing.T) {
 
 func TestAddUpdateDelRecord(t *testing.T) {
 	c, _ := config.ReadConf("../config.json")
-	z, err := New(c.Dynv6.Token, "deorth-moonlight.dynv6.net")
+	z, err := New(c.Dynv6[0].Token, "deorth-moonlight.dynv6.net")
 	if err != nil {
 		t.Error(err)
 	}

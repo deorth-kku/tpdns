@@ -10,7 +10,7 @@ type TpdnsConfig struct {
 	Router  router          `json:"router"`
 	Domain  domain          `json:"domain"`
 	Server  server          `json:"server"`
-	Dynv6   Dynv6Config     `json:"dynv6"`
+	Dynv6   []Dynv6Config   `json:"dynv6"`
 	Fwrules []DeviceFwRules `json:"fwrules"`
 	Log     LogConfig       `json:"log"`
 }

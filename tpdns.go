@@ -65,7 +65,7 @@ func update_rules_for_dev(dev tpapi.Device, c *tpapi.TPSession, conf_rules []con
 	}
 }
 
-func updateSPF(name string, ipv4 string, ipv6prefix string, zone dynv6.Zone) {
+func updateSPF(name string, ipv4 string, ipv6prefix string, zone *dynv6.Zone) {
 	rs, err := zone.GetRecords()
 	if err != nil {
 		log.Printf("failed to get records for zone %d\n", zone.ID)
@@ -75,7 +75,6 @@ func updateSPF(name string, ipv4 string, ipv6prefix string, zone dynv6.Zone) {
 	req := dynv6.RecordInfo{Name: name, Data: new_data, Type: "TXT"}
 	for _, r := range rs {
 		if r.Type == "TXT" && r.Name == name && strings.HasPrefix(r.Data, "v=spf1") {
-			log.Println("updating spf")
 			_, err := r.Update(req)
 			if err != nil {
 				log.Printf("failed to update spf record, %s\n", err)
@@ -132,30 +131,35 @@ func main() {
 	}
 	c.SetGenerateIPv6(conf.Domain.GenIPv6...)
 
-	dynv6_enabled := conf.Dynv6.Token != "" && conf.Dynv6.Zone != ""
-
-	var d dynv6.Zone
-	if dynv6_enabled {
-		d, err = dynv6.New(conf.Dynv6.Token, conf.Dynv6.Zone)
+	zones := make([]*dynv6.Zone, len(conf.Dynv6))
+	for i, z := range conf.Dynv6 {
+		d, err := dynv6.New(z.Token, z.Zone)
 		if err != nil {
-			log.Panicf("failed to connect to dynv6: %s\n", err)
+			log.Panicf("failed to connect to dynv6 on %s: %s\n", z.Zone, err)
+		} else {
+			zones[i] = d
 		}
 	}
 
 	dp := parser.Parser(conf, c)
 	dp.SetOnReconnect(func(ipv4 string, ipv6prefix string) {
 		log.Printf("reconnected with ipv4: %s, ipv6prefix: %s\n", ipv4, ipv6prefix)
-		if dynv6_enabled {
+		for i, zone := range zones {
+			if zone == nil {
+				continue
+			}
 			ipv6 := strings.Split(ipv6prefix, "/")[0]
 			if ipv6 == "::" {
 				ipv6 = ""
 			}
-			_, err := d.Update(ipv4, ipv6)
+			_, err := zone.Update(ipv4, ipv6)
 			if err != nil {
 				log.Printf("failed to update dynv6 zone, %s", err)
 			}
-			if conf.Dynv6.SPF.Enabled {
-				updateSPF(conf.Dynv6.SPF.Name, ipv4, ipv6prefix, d)
+			log.Printf("updated ipv4 and ipv6prefix for zone %s", zone.Name)
+			if conf.Dynv6[i].SPF.Enabled {
+				updateSPF(conf.Dynv6[i].SPF.Name, ipv4, ipv6prefix, zone)
+				log.Printf("updated SPF for zone %s", zone.Name)
 			}
 		}
 

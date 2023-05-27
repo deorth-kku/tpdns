@@ -22,9 +22,11 @@ type Zone struct {
 
 const dynv6api = "https://dynv6.com/api/v2"
 
-func New(token string, zone_name string) (zone Zone, err error) {
+func New(token string, zone_name string) (zone *Zone, err error) {
 	t := fmt.Sprintf("Bearer %s", token)
-	zone.session = gorequest.New().Set("Authorization", t)
+	zone = &Zone{
+		session: gorequest.New().Set("Authorization", t),
+	}
 	zone.session.DoNotClearSuperAgent = true
 	url, err := url.JoinPath(dynv6api, "zones/by-name", zone_name)
 	if err != nil {
