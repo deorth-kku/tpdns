@@ -12,7 +12,15 @@ import (
 func (gdata *dns_parser) parseQuery(m *dns.Msg) {
 	flushed := false
 	for _, q := range m.Question {
-		device_name := strings.Split(q.Name, ".")[0]
+		var device_name string
+		if strings.HasSuffix(q.Name, gdata.Conf.Domain.PubZone) {
+			device_name = strings.TrimSuffix(q.Name, "."+gdata.Conf.Domain.PubZone)
+		} else if strings.HasSuffix(q.Name, gdata.Conf.Domain.PrivZone) {
+			device_name = strings.TrimSuffix(q.Name, "."+gdata.Conf.Domain.PrivZone)
+		} else {
+			continue
+		}
+
 		device_name = strings.ToLower(device_name)
 
 		device, ok := gdata.dns_cache[device_name]
