@@ -15,7 +15,7 @@ import (
 	"github.com/miekg/dns"
 )
 
-func update_rules_for_dev(dev tpapi.Device, c *tpapi.TPSession, conf_rules []config.DeviceFwRules, onconnect bool) {
+func update_rules_for_dev(dev tpapi.Device, c *tpapi.TPSession, conf_rules config.DevicesFwRules, onconnect bool) {
 	devname, err := url.QueryUnescape(dev.Hostname)
 	if err != nil {
 		log.Printf("not unescapable device name %s\n", dev.Hostname)
@@ -27,42 +27,57 @@ func update_rules_for_dev(dev tpapi.Device, c *tpapi.TPSession, conf_rules []con
 		log.Printf("new device online: %s\n", devname)
 	}
 
-	for _, conf_dev := range conf_rules {
-		match_mac := conf_dev.Mac == "" || dev.MAC == conf_dev.Mac
-		match_name := conf_dev.Name == "" || devname == conf_dev.Name
+	rules, exist := conf_rules.SearchDevice(devname, dev.MAC)
+	if !exist {
+		return
+	}
 
-		if match_mac && match_name {
-			existed_rules, err := c.Getfwrules(1)
-			if err != nil {
-				log.Printf("failed to Getfwrules: %s\n", err)
-				return
-			}
-			for _, conf_rule := range conf_dev.Rules {
-				name, rule, ok := existed_rules.Search(conf_rule.Proto, conf_rule.Port)
-				if !ok {
-					err = c.AddFwRule(1, conf_rule.Port, dev.IP, dev.IPv6, conf_rule.Proto)
-					if err != nil {
-						log.Printf("failed to add new rule %d %s, %s\n", conf_rule.Port, conf_rule.Proto, err)
-					}
-					continue
-				}
-				if rule.DestIP == dev.IP && rule.DestIP6 == dev.IPv6 {
-					continue
-				}
-				err = c.DelFwRule(1, name)
-				if err != nil {
-					log.Printf("failed to delete old rule %d %s, %s\n", conf_rule.Port, conf_rule.Proto, err)
-				} else {
-					log.Printf("deleted old rule %d %s\n", conf_rule.Port, conf_rule.Proto)
-				}
-				err = c.AddFwRule(1, conf_rule.Port, dev.IP, dev.IPv6, conf_rule.Proto)
-				if err != nil {
-					log.Printf("failed to add new rule %d %s, %s\n", conf_rule.Port, conf_rule.Proto, err)
-				}
-			}
+	// hardcode retries=3 for now
+	for i := 0; i <= 3; i++ {
+		var need_del []string
+		var need_add []config.Rule
 
+		existed_rules, err := c.Getfwrules(1)
+		if err != nil {
+			log.Printf("failed to Getfwrules: %s\n", err)
+			return
+		}
+
+		for _, conf_rule := range rules {
+			name, rule, ok := existed_rules.Search(conf_rule.Proto, conf_rule.Port)
+			if !ok {
+				need_add = append(need_add, conf_rule)
+				continue
+			}
+			if rule.DestIP == dev.IP && rule.DestIP6 == dev.IPv6 {
+				continue
+			}
+			need_del = append(need_del, name)
+			need_add = append(need_add, conf_rule)
+		}
+
+		if len(need_add)+len(need_del) == 0 {
+			log.Printf("no nore fwrules to add or del for device %s\n", devname)
+			break
+		}
+
+		err = c.DelFwRule(1, need_del...)
+		if err != nil {
+			log.Printf("failed to delete old rules for device %s, %s\n", devname, err)
+		} else {
+			log.Println("deleted old rules")
+		}
+
+		for _, rule := range need_add {
+			err = c.AddFwRule(1, rule.Port, dev.IP, dev.IPv6, rule.Proto)
+			if err == nil {
+				log.Printf("added new rule %d %s\n", rule.Port, rule.Proto)
+			} else {
+				log.Printf("failed to add new rule %d %s, %s\n", rule.Port, rule.Proto, err)
+			}
 		}
 	}
+
 }
 
 func updateSPF(name string, ipv4 string, ipv6prefix string, zone *dynv6.Zone) {
