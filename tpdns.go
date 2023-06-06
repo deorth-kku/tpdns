@@ -167,7 +167,7 @@ func main() {
 			if ipv6 == "::" {
 				ipv6 = ""
 			}
-			_, err := zone.Update(ipv4, ipv6)
+			_, err := zone.CheckUpdate(ipv4, ipv6)
 			if err != nil {
 				log.Printf("failed to update dynv6 zone, %s", err)
 			}

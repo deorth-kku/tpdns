@@ -41,3 +41,10 @@ func (z *Zone) Update(ipv4address string, ipv6prefix string) (zd Zone, err error
 	}
 	return
 }
+
+func (z *Zone) CheckUpdate(ipv4address string, ipv6prefix string) (zd Zone, err error) {
+	if ipv4address == z.IPv4Address && ipv6prefix == z.IPv6Prefix {
+		return *z, nil
+	}
+	return z.Update(ipv4address, ipv6prefix)
+}
