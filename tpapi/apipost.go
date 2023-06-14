@@ -32,6 +32,7 @@ func (s *TPSession) ApiPost(timeout int, data ...any) (rsp TPResponse, err error
 	} else if rsp.Error_code == EUNAUTH {
 		err = s.flushstok()
 		if err != nil {
+			time.Sleep(10 * time.Second)
 			return
 		}
 		rsp, err = s.apiPost(timeout, data...)

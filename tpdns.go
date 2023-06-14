@@ -60,12 +60,13 @@ func update_rules_for_dev(dev tpapi.Device, c *tpapi.TPSession, conf_rules confi
 			log.Printf("no nore fwrules to add or del for device %s\n", devname)
 			break
 		}
-
-		err = c.DelFwRule(1, need_del...)
-		if err != nil {
-			log.Printf("failed to delete old rules for device %s, %s\n", devname, err)
-		} else {
-			log.Println("deleted old rules")
+		if len(need_del) != 0 {
+			err = c.DelFwRule(1, need_del...)
+			if err != nil {
+				log.Printf("failed to delete old rules for device %s, %s\n", devname, err)
+			} else {
+				log.Printf("deleted old rules for device %s, count=%d\n", devname, len(need_del))
+			}
 		}
 
 		for _, rule := range need_add {
@@ -164,6 +165,9 @@ func main() {
 				continue
 			}
 			ipv6 := strings.Split(ipv6prefix, "/")[0]
+			if ipv4 == "0.0.0.0" {
+				ipv4 = ""
+			}
 			if ipv6 == "::" {
 				ipv6 = ""
 			}
