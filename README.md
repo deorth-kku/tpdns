@@ -1,4 +1,5 @@
 ### TODO:
+* [ ] fix EIPV6NOTLANSUBNET
 * [ ] fix dynv6 would do nothing when starting on no network connection
 * [x] reties on port forward config
 * [x] ptr record for .in-addr.arpa.
