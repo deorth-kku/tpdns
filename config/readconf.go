@@ -23,12 +23,25 @@ type router struct {
 }
 
 type domain struct {
-	PubZone            string   `json:"public_zone_name"`
-	PrivZone           string   `json:"private_zone_name"`
-	PrivZoneGlobalIPv6 bool     `json:"private_zone_global_ipv6"`
-	GenIPv6            []string `json:"generate_ipv6"`
-	TTL                uint     `json:"ttl"`
+	PubZone  zone     `json:"public_zone"`
+	PrivZone zone     `json:"private_zone"`
+	GenIPv6  []string `json:"generate_ipv6"`
+	TTL      uint     `json:"ttl"`
 }
+
+type zone struct {
+	Name       string  `json:"name"`
+	Records    Records `json:"records"`
+	GlobalIPv6 bool    `json:"pglobal_ipv6"`
+}
+
+type record struct {
+	Name  string `json:"name"`
+	Type  string `json:"type"`
+	Value string `json:"value"`
+}
+
+type Records []record
 
 type server struct {
 	IP   string `json:"ip"`

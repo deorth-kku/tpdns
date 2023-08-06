@@ -5,6 +5,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/deorth-kku/tpdns/config"
 	"github.com/deorth-kku/tpdns/tpapi"
 	"github.com/miekg/dns"
 )
@@ -13,10 +14,10 @@ func (gdata *dns_parser) parseQuery(m *dns.Msg) {
 	flushed := false
 	for _, q := range m.Question {
 		var device_name string
-		if strings.HasSuffix(q.Name, gdata.Conf.Domain.PubZone) {
-			device_name = strings.TrimSuffix(q.Name, "."+gdata.Conf.Domain.PubZone)
-		} else if strings.HasSuffix(q.Name, gdata.Conf.Domain.PrivZone) {
-			device_name = strings.TrimSuffix(q.Name, "."+gdata.Conf.Domain.PrivZone)
+		if strings.HasSuffix(q.Name, gdata.Conf.Domain.PubZone.Name) {
+			device_name = strings.TrimSuffix(q.Name, "."+gdata.Conf.Domain.PubZone.Name)
+		} else if strings.HasSuffix(q.Name, gdata.Conf.Domain.PrivZone.Name) {
+			device_name = strings.TrimSuffix(q.Name, "."+gdata.Conf.Domain.PrivZone.Name)
 		} else {
 			continue
 		}
@@ -33,40 +34,65 @@ func (gdata *dns_parser) parseQuery(m *dns.Msg) {
 		device, ok = gdata.dns_cache[device_name]
 		if !ok {
 			log.Printf("failed to find %s in cache", device_name)
-			m.Rcode = dns.RcodeNameError
 			break
 		}
 
-		var ip string
-		var rr_type string
+		var rsp string
+		rr_type := dns.Type(q.Qtype).String()
+
 		switch q.Qtype {
 		case dns.TypeA:
-			rr_type = "A"
-			if strings.HasSuffix(q.Name, gdata.Conf.Domain.PubZone) {
-				ip = gdata.pub_ip.IPv4
+			if strings.HasSuffix(q.Name, gdata.Conf.Domain.PubZone.Name) {
+				rsp = gdata.pub_ip.IPv4
 			} else {
-				ip = device.IP
+				rsp = device.IP
+			}
+
+			log.Printf("Query for %s %s\n", q.Name, rr_type)
+			line := fmt.Sprintf("%s %d IN %s %s", q.Name, gdata.countdown, rr_type, rsp)
+			rr, err := dns.NewRR(line)
+			if err == nil {
+				m.Answer = append(m.Answer, rr)
 			}
 		case dns.TypeAAAA:
-			rr_type = "AAAA"
-			if gdata.Conf.Domain.PrivZoneGlobalIPv6 || strings.HasSuffix(q.Name, gdata.Conf.Domain.PubZone) {
-				if ip == "::" {
+			if gdata.Conf.Domain.PrivZone.GlobalIPv6 || strings.HasSuffix(q.Name, gdata.Conf.Domain.PubZone.Name) {
+				if rsp == "::" {
 					log.Printf("skipping AAAA for %s because it doesn't have ipv6", device_name)
 					continue
 				}
-				ip = device.IPv6
+				rsp = device.IPv6
 			} else {
-				ip, _ = tpapi.Gen_v6("fe80::", device.MAC)
+				rsp, _ = tpapi.Gen_v6("fe80::", device.MAC)
+			}
+
+			log.Printf("Query for %s %s\n", q.Name, rr_type)
+			line := fmt.Sprintf("%s %d IN %s %s", q.Name, gdata.countdown, rr_type, rsp)
+			rr, err := dns.NewRR(line)
+			if err == nil {
+				m.Answer = append(m.Answer, rr)
+			}
+		default:
+			var records config.Records
+			if strings.HasSuffix(q.Name, gdata.Conf.Domain.PubZone.Name) {
+				records = gdata.Conf.Domain.PubZone.Records
+			} else {
+				records = gdata.Conf.Domain.PrivZone.Records
+			}
+			for _, r := range records {
+				if device_name == r.Name && rr_type == r.Type {
+					rsp = r.Value
+					line := fmt.Sprintf("%s %d IN %s %s", q.Name, gdata.countdown, rr_type, rsp)
+					rr, err := dns.NewRR(line)
+					if err == nil {
+						m.Answer = append(m.Answer, rr)
+					}
+				}
 			}
 
 		}
-
-		log.Printf("Query for %s %s\n", q.Name, rr_type)
-		line := fmt.Sprintf("%s %d IN %s %s", q.Name, gdata.countdown, rr_type, ip)
-		rr, err := dns.NewRR(line)
-		if err == nil {
-			m.Answer = append(m.Answer, rr)
-		}
+	}
+	if len(m.Answer) == 0 {
+		m.Rcode = dns.RcodeNameError
 	}
 }
 
@@ -115,7 +141,7 @@ func (dp *dns_parser) parsePtrQuery(m *dns.Msg) {
 		case dns.TypePTR:
 			for name, info := range dp.dns_cache {
 				if ip == info.IP {
-					line := fmt.Sprintf("%s %d IN PTR %s.%s", q.Name, dp.countdown, name, dp.Conf.Domain.PrivZone)
+					line := fmt.Sprintf("%s %d IN PTR %s.%s", q.Name, dp.countdown, name, dp.Conf.Domain.PrivZone.Name)
 					rr, err := dns.NewRR(line)
 					if err == nil {
 						m.Answer = append(m.Answer, rr)
@@ -126,9 +152,12 @@ func (dp *dns_parser) parsePtrQuery(m *dns.Msg) {
 				}
 			}
 			log.Printf("failed to find %s in cache", ip)
-			m.Rcode = dns.RcodeNameError
+
 			return
 		}
+	}
+	if len(m.Answer) == 0 {
+		m.Rcode = dns.RcodeNameError
 	}
 }
 
