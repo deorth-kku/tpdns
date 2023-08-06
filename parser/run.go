@@ -14,14 +14,32 @@ func (gdata *dns_parser) parseQuery(m *dns.Msg) {
 	flushed := false
 	for _, q := range m.Question {
 		var device_name string
+		var zone *config.Zone
 		is_ip_query := (q.Qtype == dns.TypeA || q.Qtype == dns.TypeAAAA)
 
-		if strings.HasSuffix(q.Name, gdata.Conf.Domain.PubZone.Name) {
-			device_name = strings.TrimSuffix(q.Name, "."+gdata.Conf.Domain.PubZone.Name)
-		} else if strings.HasSuffix(q.Name, gdata.Conf.Domain.PrivZone.Name) {
-			device_name = strings.TrimSuffix(q.Name, "."+gdata.Conf.Domain.PrivZone.Name)
-		} else {
+		for _, z := range gdata.Conf.Domain.Zones {
+			if strings.HasSuffix(q.Name, z.Name) {
+				zone = &z
+				device_name = strings.TrimSuffix(q.Name, "."+z.Name)
+				break
+			}
+		}
+
+		if zone == nil {
 			continue
+		}
+
+		if device_name == q.Name && zone.DefaultDevice != "" {
+			device_name = zone.DefaultDevice
+		}
+
+		if target, ok := zone.CNAMEs[device_name]; ok && is_ip_query {
+			line := fmt.Sprintf("%s %d IN %s %s", q.Name, gdata.countdown, "CNAME", target+"."+zone.Name)
+			rr, err := dns.NewRR(line)
+			if err == nil {
+				m.Answer = append(m.Answer, rr)
+			}
+			device_name = target
 		}
 
 		device_name = strings.ToLower(device_name)
@@ -36,7 +54,7 @@ func (gdata *dns_parser) parseQuery(m *dns.Msg) {
 		device, ok = gdata.dns_cache[device_name]
 		if !ok && is_ip_query {
 			log.Printf("failed to find %s in cache", device_name)
-			break
+			continue
 		}
 
 		var rsp string
@@ -44,20 +62,20 @@ func (gdata *dns_parser) parseQuery(m *dns.Msg) {
 
 		switch q.Qtype {
 		case dns.TypeA:
-			if strings.HasSuffix(q.Name, gdata.Conf.Domain.PubZone.Name) {
+			if zone.GlobalIPv4 {
 				rsp = gdata.pub_ip.IPv4
 			} else {
 				rsp = device.IP
 			}
 
 			log.Printf("Query for %s %s\n", q.Name, rr_type)
-			line := fmt.Sprintf("%s %d IN %s %s", q.Name, gdata.countdown, rr_type, rsp)
+			line := fmt.Sprintf("%s %d IN %s %s", device_name+"."+zone.Name, gdata.countdown, rr_type, rsp)
 			rr, err := dns.NewRR(line)
 			if err == nil {
 				m.Answer = append(m.Answer, rr)
 			}
 		case dns.TypeAAAA:
-			if gdata.Conf.Domain.PrivZone.GlobalIPv6 || strings.HasSuffix(q.Name, gdata.Conf.Domain.PubZone.Name) {
+			if zone.GlobalIPv6 {
 				if rsp == "::" {
 					log.Printf("skipping AAAA for %s because it doesn't have ipv6", device_name)
 					continue
@@ -68,19 +86,13 @@ func (gdata *dns_parser) parseQuery(m *dns.Msg) {
 			}
 
 			log.Printf("Query for %s %s\n", q.Name, rr_type)
-			line := fmt.Sprintf("%s %d IN %s %s", q.Name, gdata.countdown, rr_type, rsp)
+			line := fmt.Sprintf("%s %d IN %s %s", device_name+"."+zone.Name, gdata.countdown, rr_type, rsp)
 			rr, err := dns.NewRR(line)
 			if err == nil {
 				m.Answer = append(m.Answer, rr)
 			}
 		default:
-			var records config.Records
-			if strings.HasSuffix(q.Name, gdata.Conf.Domain.PubZone.Name) {
-				records = gdata.Conf.Domain.PubZone.Records
-			} else {
-				records = gdata.Conf.Domain.PrivZone.Records
-			}
-			for _, r := range records {
+			for _, r := range zone.Records {
 				if device_name == r.Name && rr_type == r.Type {
 					rsp = r.Value
 					line := fmt.Sprintf("%s %d IN %s %s", q.Name, gdata.countdown, rr_type, rsp)
@@ -127,6 +139,19 @@ func (dp *dns_parser) HandlePtrRequest(w dns.ResponseWriter, r *dns.Msg) {
 const PtrSuffix = "in-addr.arpa."
 
 func (dp *dns_parser) parsePtrQuery(m *dns.Msg) {
+	var zone *config.Zone
+
+	for _, z := range dp.Conf.Domain.Zones {
+		if !z.GlobalIPv4 {
+			zone = &z
+			break
+		}
+	}
+	if zone == nil {
+		m.Rcode = dns.RcodeNameError
+		return
+	}
+
 	for _, q := range m.Question {
 		if !strings.HasSuffix(q.Name, PtrSuffix) {
 			log.Printf("unsupported name for PTR: %s", q.Name)
@@ -143,7 +168,7 @@ func (dp *dns_parser) parsePtrQuery(m *dns.Msg) {
 		case dns.TypePTR:
 			for name, info := range dp.dns_cache {
 				if ip == info.IP {
-					line := fmt.Sprintf("%s %d IN PTR %s.%s", q.Name, dp.countdown, name, dp.Conf.Domain.PrivZone.Name)
+					line := fmt.Sprintf("%s %d IN PTR %s.%s", q.Name, dp.countdown, name, zone.Name)
 					rr, err := dns.NewRR(line)
 					if err == nil {
 						m.Answer = append(m.Answer, rr)

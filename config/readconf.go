@@ -23,16 +23,18 @@ type router struct {
 }
 
 type domain struct {
-	PubZone  zone     `json:"public_zone"`
-	PrivZone zone     `json:"private_zone"`
-	GenIPv6  []string `json:"generate_ipv6"`
-	TTL      uint     `json:"ttl"`
+	Zones   []Zone   `json:"zones"`
+	GenIPv6 []string `json:"generate_ipv6"`
+	TTL     uint     `json:"ttl"`
 }
 
-type zone struct {
-	Name       string  `json:"name"`
-	Records    Records `json:"records"`
-	GlobalIPv6 bool    `json:"pglobal_ipv6"`
+type Zone struct {
+	Name          string            `json:"name"`
+	DefaultDevice string            `json:"default_device"`
+	Records       Records           `json:"records"`
+	GlobalIPv4    bool              `json:"global_ipv4"`
+	GlobalIPv6    bool              `json:"global_ipv6"`
+	CNAMEs        map[string]string `json:"-"`
 }
 
 type record struct {
@@ -68,6 +70,14 @@ func ReadConf(filename string) (c *TpdnsConfig, err error) {
 			return
 		}
 		c.Router.Stok = string(data)
+	}
+	for i, zone := range c.Domain.Zones {
+		c.Domain.Zones[i].CNAMEs = make(map[string]string)
+		for _, record := range zone.Records {
+			if record.Type == "CNAME" {
+				c.Domain.Zones[i].CNAMEs[record.Name] = record.Value
+			}
+		}
 	}
 	return
 }

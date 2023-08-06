@@ -25,13 +25,10 @@ func TestParser(t *testing.T) {
 		Name:  "pve.lan.",
 		Qtype: dns.TypeA,
 	})
+
 	q.Question = append(q.Question, dns.Question{
-		Name:  "pve.wan.",
-		Qtype: dns.TypeTXT,
-	})
-	q.Question = append(q.Question, dns.Question{
-		Name:  "pve.wan.",
-		Qtype: dns.TypeHTTPS,
+		Name:  "aa.abc.wan.",
+		Qtype: dns.TypeA,
 	})
 	p.parseQuery(q)
 	for _, answer := range q.Answer {

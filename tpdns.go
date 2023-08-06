@@ -192,8 +192,9 @@ func main() {
 	})
 
 	// attach request handler func
-	dns.HandleFunc(conf.Domain.PrivZone.Name, dp.HandleDnsRequest)
-	dns.HandleFunc(conf.Domain.PubZone.Name, dp.HandleDnsRequest)
+	for _, z := range conf.Domain.Zones {
+		dns.HandleFunc(z.Name, dp.HandleDnsRequest)
+	}
 	dns.HandleFunc(parser.PtrSuffix, dp.HandlePtrRequest)
 
 	addr := fmt.Sprintf("%s:%d", conf.Server.IP, conf.Server.Port)
