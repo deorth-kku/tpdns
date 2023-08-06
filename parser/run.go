@@ -14,6 +14,8 @@ func (gdata *dns_parser) parseQuery(m *dns.Msg) {
 	flushed := false
 	for _, q := range m.Question {
 		var device_name string
+		is_ip_query := (q.Qtype == dns.TypeA || q.Qtype == dns.TypeAAAA)
+
 		if strings.HasSuffix(q.Name, gdata.Conf.Domain.PubZone.Name) {
 			device_name = strings.TrimSuffix(q.Name, "."+gdata.Conf.Domain.PubZone.Name)
 		} else if strings.HasSuffix(q.Name, gdata.Conf.Domain.PrivZone.Name) {
@@ -25,14 +27,14 @@ func (gdata *dns_parser) parseQuery(m *dns.Msg) {
 		device_name = strings.ToLower(device_name)
 
 		device, ok := gdata.dns_cache[device_name]
-		if gdata.needFlush || (!ok && !flushed) {
+		if is_ip_query && (gdata.needFlush || (!ok && !flushed)) {
 			log.Printf("%s not found in cache or cache outdated\n", device_name)
 			gdata.flushCache(true)
 			flushed = true
 		}
 
 		device, ok = gdata.dns_cache[device_name]
-		if !ok {
+		if !ok && is_ip_query {
 			log.Printf("failed to find %s in cache", device_name)
 			break
 		}
