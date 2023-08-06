@@ -29,10 +29,12 @@ func (gdata *dns_parser) parseQuery(m *dns.Msg) {
 			continue
 		}
 
-		if device_name == q.Name && zone.DefaultDevice != "" {
+		is_default := device_name == q.Name && zone.DefaultDevice != ""
+		if is_default {
 			device_name = zone.DefaultDevice
 		}
 
+		var use_name string
 		if target, ok := zone.CNAMEs[device_name]; ok && is_ip_query {
 			line := fmt.Sprintf("%s %d IN %s %s", q.Name, gdata.countdown, "CNAME", target+"."+zone.Name)
 			rr, err := dns.NewRR(line)
@@ -40,6 +42,10 @@ func (gdata *dns_parser) parseQuery(m *dns.Msg) {
 				m.Answer = append(m.Answer, rr)
 			}
 			device_name = target
+			use_name = device_name + "." + zone.Name
+
+		} else {
+			use_name = q.Name
 		}
 
 		device_name = strings.ToLower(device_name)
@@ -69,7 +75,7 @@ func (gdata *dns_parser) parseQuery(m *dns.Msg) {
 			}
 
 			log.Printf("Query for %s %s\n", q.Name, rr_type)
-			line := fmt.Sprintf("%s %d IN %s %s", device_name+"."+zone.Name, gdata.countdown, rr_type, rsp)
+			line := fmt.Sprintf("%s %d IN %s %s", use_name, gdata.countdown, rr_type, rsp)
 			rr, err := dns.NewRR(line)
 			if err == nil {
 				m.Answer = append(m.Answer, rr)
@@ -86,7 +92,7 @@ func (gdata *dns_parser) parseQuery(m *dns.Msg) {
 			}
 
 			log.Printf("Query for %s %s\n", q.Name, rr_type)
-			line := fmt.Sprintf("%s %d IN %s %s", device_name+"."+zone.Name, gdata.countdown, rr_type, rsp)
+			line := fmt.Sprintf("%s %d IN %s %s", use_name, gdata.countdown, rr_type, rsp)
 			rr, err := dns.NewRR(line)
 			if err == nil {
 				m.Answer = append(m.Answer, rr)
