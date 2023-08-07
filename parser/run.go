@@ -3,6 +3,7 @@ package parser
 import (
 	"fmt"
 	"log"
+	"reflect"
 	"strings"
 
 	"github.com/deorth-kku/tpdns/config"
@@ -10,14 +11,45 @@ import (
 	"github.com/miekg/dns"
 )
 
-func (gdata *dns_parser) parseQuery(m *dns.Msg) {
+func (dp *dns_parser) getIPv4(device tpapi.Device, zone *config.Zone) string {
+	if zone.GlobalIPv4 {
+		return dp.pub_ip.IPv4
+	} else {
+		return device.IP
+	}
+}
+
+func (dp *dns_parser) getIPv6(device tpapi.Device, zone *config.Zone) string {
+	var rsp string
+	if zone.GlobalIPv6 {
+		if rsp == "::" {
+			log.Printf("skipping AAAA for %s because it doesn't have ipv6", device.Hostname)
+			return rsp
+		}
+		rsp = device.IPv6
+	} else {
+		rsp, _ = tpapi.Gen_v6("fe80::", device.MAC)
+	}
+	return rsp
+}
+
+func (dp *dns_parser) addRsp(m *dns.Msg, name string, rr_type string, rsp string) {
+	log.Printf("Query for %s %s\n", name, rr_type)
+	line := fmt.Sprintf("%s %d IN %s %s", name, dp.countdown, rr_type, rsp)
+	rr, err := dns.NewRR(line)
+	if err == nil {
+		m.Answer = append(m.Answer, rr)
+	}
+}
+
+func (dp *dns_parser) parseQuery(m *dns.Msg) {
 	flushed := false
 	for _, q := range m.Question {
 		var device_name string
 		var zone *config.Zone
 		is_ip_query := (q.Qtype == dns.TypeA || q.Qtype == dns.TypeAAAA)
 
-		for _, z := range gdata.Conf.Domain.Zones {
+		for _, z := range dp.Conf.Domain.Zones {
 			if strings.HasSuffix(q.Name, z.Name) {
 				zone = &z
 				device_name = strings.TrimSuffix(q.Name, "."+z.Name)
@@ -29,14 +61,14 @@ func (gdata *dns_parser) parseQuery(m *dns.Msg) {
 			continue
 		}
 
-		is_default := device_name == q.Name && zone.DefaultDevice != ""
+		is_default := device_name == q.Name && zone.DefaultDevice != "" && is_ip_query
 		if is_default {
 			device_name = zone.DefaultDevice
 		}
 
 		var use_name string
 		if target, ok := zone.CNAMEs[device_name]; ok && is_ip_query {
-			line := fmt.Sprintf("%s %d IN %s %s", q.Name, gdata.countdown, "CNAME", target+"."+zone.Name)
+			line := fmt.Sprintf("%s %d IN %s %s", q.Name, dp.countdown, "CNAME", target+"."+zone.Name)
 			rr, err := dns.NewRR(line)
 			if err == nil {
 				m.Answer = append(m.Answer, rr)
@@ -50,14 +82,14 @@ func (gdata *dns_parser) parseQuery(m *dns.Msg) {
 
 		device_name = strings.ToLower(device_name)
 
-		device, ok := gdata.dns_cache[device_name]
-		if is_ip_query && (gdata.needFlush || (!ok && !flushed)) {
+		_, ok := dp.dns_cache[device_name]
+		if is_ip_query && (dp.needFlush || (!ok && !flushed)) {
 			log.Printf("%s not found in cache or cache outdated\n", device_name)
-			gdata.flushCache(true)
+			dp.flushCache(true)
 			flushed = true
 		}
 
-		device, ok = gdata.dns_cache[device_name]
+		device, ok := dp.dns_cache[device_name]
 		if !ok && is_ip_query {
 			log.Printf("failed to find %s in cache", device_name)
 			continue
@@ -68,47 +100,28 @@ func (gdata *dns_parser) parseQuery(m *dns.Msg) {
 
 		switch q.Qtype {
 		case dns.TypeA:
-			if zone.GlobalIPv4 {
-				rsp = gdata.pub_ip.IPv4
-			} else {
-				rsp = device.IP
-			}
-
-			log.Printf("Query for %s %s\n", q.Name, rr_type)
-			line := fmt.Sprintf("%s %d IN %s %s", use_name, gdata.countdown, rr_type, rsp)
-			rr, err := dns.NewRR(line)
-			if err == nil {
-				m.Answer = append(m.Answer, rr)
-			}
+			rsp = dp.getIPv4(device, zone)
+			dp.addRsp(m, use_name, rr_type, rsp)
 		case dns.TypeAAAA:
-			if zone.GlobalIPv6 {
-				if rsp == "::" {
-					log.Printf("skipping AAAA for %s because it doesn't have ipv6", device_name)
-					continue
-				}
-				rsp = device.IPv6
-			} else {
-				rsp, _ = tpapi.Gen_v6("fe80::", device.MAC)
+			rsp = dp.getIPv6(device, zone)
+			if rsp == "" {
+				continue
 			}
-
-			log.Printf("Query for %s %s\n", q.Name, rr_type)
-			line := fmt.Sprintf("%s %d IN %s %s", use_name, gdata.countdown, rr_type, rsp)
-			rr, err := dns.NewRR(line)
-			if err == nil {
-				m.Answer = append(m.Answer, rr)
-			}
+			dp.addRsp(m, use_name, rr_type, rsp)
 		default:
 			for _, r := range zone.Records {
 				if device_name == r.Name && rr_type == r.Type {
-					rsp = r.Value
-					line := fmt.Sprintf("%s %d IN %s %s", q.Name, gdata.countdown, rr_type, rsp)
-					rr, err := dns.NewRR(line)
-					if err == nil {
-						m.Answer = append(m.Answer, rr)
+					if r.Template.IsEmpty() {
+						rsp = r.Value
+					} else if device, ok := dp.dns_cache[r.Template.DeviceName]; ok {
+						args := dp.convertArgs(r.Template.Args, device, zone)
+						rsp = fmt.Sprintf(r.Value, args...)
+					} else {
+						continue
 					}
+					dp.addRsp(m, q.Name, rr_type, rsp)
 				}
 			}
-
 		}
 	}
 	if len(m.Answer) == 0 {
@@ -116,14 +129,30 @@ func (gdata *dns_parser) parseQuery(m *dns.Msg) {
 	}
 }
 
-func (gdata *dns_parser) HandleDnsRequest(w dns.ResponseWriter, r *dns.Msg) {
+func (dp *dns_parser) convertArgs(args []string, device tpapi.Device, zone *config.Zone) (out []any) {
+	ref := reflect.ValueOf(device)
+	for _, arg := range args {
+		var f string
+		if arg == "IP" {
+			f = dp.getIPv4(device, zone)
+		} else if arg == "IPv6" {
+			f = dp.getIPv6(device, zone)
+		} else {
+			f = reflect.Indirect(ref).FieldByName(arg).String()
+		}
+		out = append(out, f)
+	}
+	return
+}
+
+func (dp *dns_parser) HandleDnsRequest(w dns.ResponseWriter, r *dns.Msg) {
 	m := new(dns.Msg)
 	m.SetReply(r)
 	m.Compress = false
 
 	switch r.Opcode {
 	case dns.OpcodeQuery:
-		gdata.parseQuery(m)
+		dp.parseQuery(m)
 	}
 
 	w.WriteMsg(m)

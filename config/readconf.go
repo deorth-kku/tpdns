@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
+
+	"golang.org/x/exp/slices"
 )
 
 type TpdnsConfig struct {
@@ -38,9 +41,19 @@ type Zone struct {
 }
 
 type record struct {
-	Name  string `json:"name"`
-	Type  string `json:"type"`
-	Value string `json:"value"`
+	Name     string         `json:"name"`
+	Type     string         `json:"type"`
+	Value    string         `json:"value"`
+	Template TemplateRecord `json:"template"`
+}
+
+type TemplateRecord struct {
+	DeviceName string   `json:"device"`
+	Args       []string `json:"args"`
+}
+
+func (tt TemplateRecord) IsEmpty() bool {
+	return tt.DeviceName == "" && len(tt.Args) == 0
 }
 
 type Records []record
@@ -48,6 +61,35 @@ type Records []record
 type server struct {
 	IP   string `json:"ip"`
 	Port uint16 `json:"port"`
+}
+
+var allowed_args = []string{
+	"MAC",
+	"ParentMAC",
+	"IsMesh",
+	"WiFiMode",
+	"Type",
+	"Blocked",
+	"IP",
+	"IPv6",
+	"Hostname",
+	"UpSpeed",
+	"DownSpeed",
+	"UpLimit",
+	"DownLimit",
+	"IsCurHost",
+	"SSID",
+	"ForbidDomain",
+	"LimitTime",
+}
+
+func check_args(args []string) error {
+	for _, arg := range args {
+		if !slices.Contains(allowed_args, arg) {
+			return fmt.Errorf("%s is not an allowed args", arg)
+		}
+	}
+	return nil
 }
 
 func ReadConf(filename string) (c *TpdnsConfig, err error) {
@@ -74,8 +116,20 @@ func ReadConf(filename string) (c *TpdnsConfig, err error) {
 	for i, zone := range c.Domain.Zones {
 		c.Domain.Zones[i].CNAMEs = make(map[string]string)
 		for _, record := range zone.Records {
+			//update CNAME to CNAMEs table
 			if record.Type == "CNAME" {
 				c.Domain.Zones[i].CNAMEs[record.Name] = record.Value
+			}
+			//check if record template is vaild
+			if !record.Template.IsEmpty() {
+				err = check_args(record.Template.Args)
+				if err != nil {
+					return
+				}
+				if strings.Count(record.Value, "%s") != len(record.Template.Args) {
+					err = fmt.Errorf("record %s type %s template does not match args", record.Name, record.Type)
+					return
+				}
 			}
 		}
 	}

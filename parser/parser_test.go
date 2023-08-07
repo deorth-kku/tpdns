@@ -23,11 +23,15 @@ func TestParser(t *testing.T) {
 	q := new(dns.Msg)
 	q.Question = append(q.Question, dns.Question{
 		Name:  "abc.wan.",
-		Qtype: dns.TypeA,
+		Qtype: dns.TypeTXT,
 	})
 	q.Question = append(q.Question, dns.Question{
 		Name:  "aa.abc.wan.",
 		Qtype: dns.TypeA,
+	})
+	q.Question = append(q.Question, dns.Question{
+		Name:  "mail.deorth.dynv6.net.",
+		Qtype: dns.TypeHTTPS,
 	})
 	p.parseQuery(q)
 	for _, answer := range q.Answer {
