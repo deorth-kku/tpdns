@@ -10,19 +10,19 @@ import (
 	"github.com/deorth-kku/tpdns/tpapi"
 )
 
-func (dp *dns_parser) ReadCache() map[string]tpapi.Device {
+func (dp *dns_parser) ReadCache() map[string]*tpapi.Device {
 	return dp.dns_cache
 }
 
-func (gdata *dns_parser) flushCache(event_enabled bool) {
-	gdata.cache_lock.Lock()
-	gdata.needFlush = false
+func (dp *dns_parser) flushCache(event_enabled bool) {
+	dp.cache_lock.Lock()
+	dp.needFlush = false
 	log.Println("started flushCache")
-	ds, err := gdata.TpSession.ApiPost(1, tpapi.Gethostsinfodata, tpapi.Getwanlanv6infodata)
+	ds, err := dp.TpSession.ApiPost(1, tpapi.Gethostsinfodata, tpapi.Getwanlanv6infodata)
 	if err != nil {
 		log.Printf("failed to flush cache: %s\n", err)
 	} else {
-		new_cache := make(map[string]tpapi.Device, 0)
+		new_cache := make(map[string]*tpapi.Device, 0)
 		for _, line := range ds.HostsInfo.HostInfo {
 			for _, info := range line {
 				host, err := url.QueryUnescape(info.Hostname)
@@ -34,30 +34,30 @@ func (gdata *dns_parser) flushCache(event_enabled bool) {
 				if host == "" || info.Blocked == "1" {
 					continue
 				}
-				new_cache[host] = info
+				new_cache[host] = &info
 
-				if _, ok := gdata.dns_cache[host]; !ok && event_enabled {
+				if _, ok := dp.dns_cache[host]; !ok && event_enabled {
 					//device without a name wont be sent, for now
-					gdata.eventDeviceOnline <- info
+					dp.eventDeviceOnline <- &info
 				}
 			}
 		}
 
-		gdata.dns_cache = new_cache
+		dp.dns_cache = new_cache
 
 		ipv6prefix := fmt.Sprintf("%s/%s", ds.Network.Lanv6Status.Prefix, ds.Network.Lanv6Status.Prefixlen)
-		if (ds.Network.WanStatus.IPAddr != "" && gdata.pub_ip.IPv4 != ds.Network.WanStatus.IPAddr) || ipv6prefix != gdata.pub_ip.IPv6 {
-			gdata.pub_ip = dualstackips{ds.Network.WanStatus.IPAddr, ipv6prefix}
+		if (ds.Network.WanStatus.IPAddr != "" && dp.pub_ip.IPv4 != ds.Network.WanStatus.IPAddr) || ipv6prefix != dp.pub_ip.IPv6 {
+			dp.pub_ip = dualstackips{ds.Network.WanStatus.IPAddr, ipv6prefix}
 			if event_enabled {
-				gdata.eventReconnect <- gdata.pub_ip
+				dp.eventReconnect <- dp.pub_ip
 			}
 
 		}
-		gdata.resetTimer <- true
+		dp.resetTimer <- true
 		log.Println("finished flushCache")
 	}
 
-	gdata.cache_lock.Unlock()
+	dp.cache_lock.Unlock()
 
 }
 

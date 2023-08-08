@@ -11,7 +11,7 @@ import (
 	"github.com/miekg/dns"
 )
 
-func (dp *dns_parser) getIPv4(device tpapi.Device, zone *config.Zone) string {
+func (dp *dns_parser) getIPv4(device *tpapi.Device, zone *config.Zone) string {
 	if zone.GlobalIPv4 {
 		return dp.pub_ip.IPv4
 	} else {
@@ -19,7 +19,7 @@ func (dp *dns_parser) getIPv4(device tpapi.Device, zone *config.Zone) string {
 	}
 }
 
-func (dp *dns_parser) getIPv6(device tpapi.Device, zone *config.Zone) string {
+func (dp *dns_parser) getIPv6(device *tpapi.Device, zone *config.Zone) string {
 	var rsp string
 	if zone.GlobalIPv6 {
 		if rsp == "::" {
@@ -144,7 +144,7 @@ func (dp *dns_parser) parseQuery(m *dns.Msg) {
 	}
 }
 
-func (dp *dns_parser) convertArgs(args []string, device tpapi.Device, zone *config.Zone) (out []any) {
+func (dp *dns_parser) convertArgs(args []string, device *tpapi.Device, zone *config.Zone) (out []any) {
 	ref := reflect.ValueOf(device)
 	for _, arg := range args {
 		var f string

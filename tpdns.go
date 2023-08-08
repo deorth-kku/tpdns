@@ -15,7 +15,7 @@ import (
 	"github.com/miekg/dns"
 )
 
-func update_rules_for_dev(dev tpapi.Device, c *tpapi.TPSession, conf_rules config.DevicesFwRules, onconnect bool) {
+func update_rules_for_dev(dev *tpapi.Device, c *tpapi.TPSession, conf_rules config.DevicesFwRules, onconnect bool) {
 	devname, err := url.QueryUnescape(dev.Hostname)
 	if err != nil {
 		log.Printf("not unescapable device name %s\n", dev.Hostname)
@@ -187,7 +187,7 @@ func main() {
 		}
 
 	})
-	dp.SetOnDeviceOnline(func(dev tpapi.Device) {
+	dp.SetOnDeviceOnline(func(dev *tpapi.Device) {
 		update_rules_for_dev(dev, c, conf.Fwrules, false)
 	})
 

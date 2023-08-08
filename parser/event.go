@@ -22,6 +22,6 @@ func (dp *dns_parser) SetOnReconnect(orf func(ipv4 string, ipv6prefix string)) {
 	go dp.onReconnect(dp.pub_ip.IPv4, dp.pub_ip.IPv6)
 }
 
-func (dp *dns_parser) SetOnDeviceOnline(odof func(tpapi.Device)) {
+func (dp *dns_parser) SetOnDeviceOnline(odof func(*tpapi.Device)) {
 	dp.onDeviceOnline = odof
 }
