@@ -66,42 +66,38 @@ func (dp *dns_parser) parseQuery(m *dns.Msg) {
 			device_name = zone.DefaultDevice
 		}
 
-		var use_name string
-		if target, ok := zone.CNAMEs[device_name]; ok && is_ip_query {
-
-			if strings.HasSuffix(target, ".") {
-				line := fmt.Sprintf("%s %d IN %s %s", q.Name, dp.countdown, "CNAME", target)
-				rr, err := dns.NewRR(line)
-				if err == nil {
-					m.Answer = append(m.Answer, rr)
-				} else {
-					log.Println(err)
-				}
-				m.Answer = append(m.Answer, resolve(target, q.Qtype, dp.Conf.Domain.UpstreamServer)...)
-				continue
-			} else {
-				line := fmt.Sprintf("%s %d IN %s %s", q.Name, dp.countdown, "CNAME", target+"."+zone.Name)
-				rr, err := dns.NewRR(line)
-				if err == nil {
-					m.Answer = append(m.Answer, rr)
-				} else {
-					log.Println(err)
-				}
-				device_name = target
-				use_name = device_name + "." + zone.Name
-			}
-
-		} else {
-			use_name = q.Name
-		}
-
 		device_name = strings.ToLower(device_name)
-
-		_, ok := dp.dns_cache[device_name]
-		if is_ip_query && (dp.needFlush || (!ok && !flushed)) {
-			log.Printf("%s not found in cache or cache outdated\n", device_name)
-			dp.flushCache(true)
-			flushed = true
+		ip_answer_name := q.Name
+		_, incache := dp.dns_cache[device_name]
+		if is_ip_query && !incache {
+			target, inCNAMEs := zone.CNAMEs[device_name]
+			if inCNAMEs {
+				if strings.HasSuffix(target, ".") {
+					line := fmt.Sprintf("%s %d IN %s %s", q.Name, dp.countdown, "CNAME", target)
+					rr, err := dns.NewRR(line)
+					if err == nil {
+						m.Answer = append(m.Answer, rr)
+					} else {
+						log.Println(err)
+					}
+					m.Answer = append(m.Answer, resolve(target, q.Qtype, dp.Conf.Domain.UpstreamServer)...)
+					continue
+				} else {
+					line := fmt.Sprintf("%s %d IN %s %s", q.Name, dp.countdown, "CNAME", target+"."+zone.Name)
+					rr, err := dns.NewRR(line)
+					if err == nil {
+						m.Answer = append(m.Answer, rr)
+					} else {
+						log.Println(err)
+					}
+					device_name = target
+					ip_answer_name = device_name + "." + zone.Name
+				}
+			} else if !flushed || dp.needFlush {
+				log.Printf("%s not found in cache or cache outdated\n", device_name)
+				dp.flushCache(true)
+				flushed = true
+			}
 		}
 
 		device, ok := dp.dns_cache[device_name]
@@ -116,13 +112,13 @@ func (dp *dns_parser) parseQuery(m *dns.Msg) {
 		switch q.Qtype {
 		case dns.TypeA:
 			rsp = dp.getIPv4(device, zone)
-			dp.addRsp(m, use_name, rr_type, rsp)
+			dp.addRsp(m, ip_answer_name, rr_type, rsp)
 		case dns.TypeAAAA:
 			rsp = dp.getIPv6(device, zone)
 			if rsp == "" {
 				continue
 			}
-			dp.addRsp(m, use_name, rr_type, rsp)
+			dp.addRsp(m, ip_answer_name, rr_type, rsp)
 		default:
 			for _, r := range zone.Records {
 				if device_name == r.Name && rr_type == r.Type {
