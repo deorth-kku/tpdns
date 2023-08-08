@@ -1,11 +1,13 @@
 package config
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 
+	"github.com/go-playground/validator/v10"
 	"golang.org/x/exp/slices"
 )
 
@@ -26,9 +28,10 @@ type router struct {
 }
 
 type domain struct {
-	Zones   []Zone   `json:"zones"`
-	GenIPv6 []string `json:"generate_ipv6"`
-	TTL     uint     `json:"ttl"`
+	Zones          []Zone   `json:"zones"`
+	GenIPv6        []string `json:"generate_ipv6"`
+	TTL            uint     `json:"ttl"`
+	UpstreamServer string   `json:"upstream_server"`
 }
 
 type Zone struct {
@@ -131,6 +134,29 @@ func ReadConf(filename string) (c *TpdnsConfig, err error) {
 					return
 				}
 			}
+		}
+	}
+	if c.Domain.UpstreamServer == "" {
+		var f *os.File
+		f, err = os.Open("/etc/resolv.conf")
+		if err != nil {
+			return
+		}
+		defer f.Close()
+		scanner := bufio.NewScanner(f)
+		for scanner.Scan() {
+			line := scanner.Text()
+			if strings.HasPrefix(line, "nameserver") {
+				line = line[10:]
+				c.Domain.UpstreamServer = strings.TrimSpace(line) + ":53"
+				break
+			}
+		}
+	} else {
+		validate := validator.New()
+		err = validate.Var(c.Domain.UpstreamServer, "hostname_port")
+		if err != nil {
+			return
 		}
 	}
 	return

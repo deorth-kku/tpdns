@@ -21,10 +21,7 @@ func TestParser(t *testing.T) {
 	p := Parser(conf, c)
 
 	q := new(dns.Msg)
-	q.Question = append(q.Question, dns.Question{
-		Name:  "abc.wan.",
-		Qtype: dns.TypeTXT,
-	})
+	q.SetQuestion("abc.wan.", dns.TypeTXT)
 	q.Question = append(q.Question, dns.Question{
 		Name:  "aa.abc.wan.",
 		Qtype: dns.TypeA,
