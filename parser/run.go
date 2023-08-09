@@ -11,6 +11,15 @@ import (
 	"github.com/miekg/dns"
 )
 
+func isInZones(domain string, zones []config.Zone) bool {
+	for _, z := range zones {
+		if strings.HasSuffix(domain, z.Name) {
+			return true
+		}
+	}
+	return false
+}
+
 func getIPv4(device *tpapi.Device, zone *config.Zone, dp *dns_parser) string {
 	if zone.GlobalIPv4 {
 		return dp.pub_ip.IPv4
@@ -33,18 +42,21 @@ func getIPv6(device *tpapi.Device, zone *config.Zone) string {
 	return rsp
 }
 
-func (dp *dns_parser) addRsp(m *dns.Msg, name string, rr_type string, rsp string) {
+func (dp *dns_parser) appendAnswer(answers []dns.RR, name string, rr_type string, rsp string) []dns.RR {
 	log.Printf("Query for %s %s\n", name, rr_type)
 	line := fmt.Sprintf("%s %d IN %s %s", name, dp.countdown, rr_type, rsp)
 	rr, err := dns.NewRR(line)
 	if err == nil {
-		m.Answer = append(m.Answer, rr)
+		answers = append(answers, rr)
+	} else {
+		log.Println(err)
 	}
+	return answers
 }
 
-func (dp *dns_parser) parseQuery(m *dns.Msg) {
+func (dp *dns_parser) ask(questions []dns.Question) (answers []dns.RR) {
 	flushed := false
-	for _, q := range m.Question {
+	for _, q := range questions {
 		var device_name string
 		var zone *config.Zone
 		is_ip_query := (q.Qtype == dns.TypeA || q.Qtype == dns.TypeAAAA)
@@ -74,25 +86,20 @@ func (dp *dns_parser) parseQuery(m *dns.Msg) {
 			target := rec.Value
 			if inCNAMEs {
 				if strings.HasSuffix(target, ".") {
-					line := fmt.Sprintf("%s %d IN %s %s", q.Name, dp.countdown, "CNAME", target)
-					rr, err := dns.NewRR(line)
-					if err == nil {
-						m.Answer = append(m.Answer, rr)
+					answers = dp.appendAnswer(answers, q.Name, "CNAME", target)
+					if isInZones(target, dp.Conf.Domain.Zones) {
+						answers = append(answers, dp.ask([]dns.Question{{
+							Name:  target,
+							Qtype: q.Qtype,
+						}})...)
 					} else {
-						log.Println(err)
+						answers = append(answers, resolve(target, q.Qtype, dp.Conf.Domain.UpstreamServer)...)
 					}
-					m.Answer = append(m.Answer, resolve(target, q.Qtype, dp.Conf.Domain.UpstreamServer)...)
 					continue
 				} else {
-					line := fmt.Sprintf("%s %d IN %s %s", q.Name, dp.countdown, "CNAME", target+"."+zone.Name)
-					rr, err := dns.NewRR(line)
-					if err == nil {
-						m.Answer = append(m.Answer, rr)
-					} else {
-						log.Println(err)
-					}
-					device_name = target
+					answers = dp.appendAnswer(answers, q.Name, "CNAME", target+"."+zone.Name)
 					ip_answer_name = device_name + "." + zone.Name
+					device_name = target
 				}
 			} else if !flushed || dp.needFlush {
 				log.Printf("%s not found in cache or cache outdated\n", device_name)
@@ -113,13 +120,13 @@ func (dp *dns_parser) parseQuery(m *dns.Msg) {
 		switch q.Qtype {
 		case dns.TypeA:
 			rsp = getIPv4(device, zone, dp)
-			dp.addRsp(m, ip_answer_name, rr_type, rsp)
+			answers = dp.appendAnswer(answers, ip_answer_name, rr_type, rsp)
 		case dns.TypeAAAA:
 			rsp = getIPv6(device, zone)
 			if rsp == "" {
 				continue
 			}
-			dp.addRsp(m, ip_answer_name, rr_type, rsp)
+			answers = dp.appendAnswer(answers, ip_answer_name, rr_type, rsp)
 		default:
 			if rec, ok := zone.Records.Match(device_name, rr_type); ok {
 				if device, ok := dp.dns_cache[rec.Template.DeviceName]; ok {
@@ -128,13 +135,11 @@ func (dp *dns_parser) parseQuery(m *dns.Msg) {
 				} else {
 					rsp = rec.Value
 				}
-				dp.addRsp(m, q.Name, rr_type, rsp)
+				answers = dp.appendAnswer(answers, q.Name, rr_type, rsp)
 			}
 		}
 	}
-	if len(m.Answer) == 0 {
-		m.Rcode = dns.RcodeNameError
-	}
+	return
 }
 
 func (dp *dns_parser) convertArgs(args []string, device *tpapi.Device, zone *config.Zone) (out []any) {
@@ -160,7 +165,11 @@ func (dp *dns_parser) HandleDnsRequest(w dns.ResponseWriter, r *dns.Msg) {
 
 	switch r.Opcode {
 	case dns.OpcodeQuery:
-		dp.parseQuery(m)
+		m.Answer = dp.ask(m.Question)
+	}
+
+	if len(m.Answer) == 0 {
+		m.Rcode = dns.RcodeNameError
 	}
 
 	w.WriteMsg(m)
