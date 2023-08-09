@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/go-playground/validator/v10"
@@ -35,12 +36,11 @@ type domain struct {
 }
 
 type Zone struct {
-	Name          string            `json:"name"`
-	DefaultDevice string            `json:"default_device"`
-	Records       Records           `json:"records"`
-	GlobalIPv4    bool              `json:"global_ipv4"`
-	GlobalIPv6    bool              `json:"global_ipv6"`
-	CNAMEs        map[string]string `json:"-"`
+	Name          string  `json:"name"`
+	DefaultDevice string  `json:"default_device"`
+	Records       Records `json:"records"`
+	GlobalIPv4    bool    `json:"global_ipv4"`
+	GlobalIPv6    bool    `json:"global_ipv6"`
 }
 
 type record struct {
@@ -48,6 +48,7 @@ type record struct {
 	Type     string         `json:"type"`
 	Value    string         `json:"value"`
 	Template TemplateRecord `json:"template"`
+	re       *regexp.Regexp `json:"-"`
 }
 
 type TemplateRecord struct {
@@ -60,6 +61,21 @@ func (tt TemplateRecord) IsEmpty() bool {
 }
 
 type Records []record
+
+func (rs Records) Match(device_name string, rr_type string) (rec record, ok bool) {
+	for _, r := range rs {
+		var domain_match bool
+		if r.re == nil {
+			domain_match = device_name == r.Name
+		} else {
+			domain_match = r.re.MatchString(device_name)
+		}
+		if domain_match && rr_type == r.Type {
+			return r, true
+		}
+	}
+	return rec, false
+}
 
 type server struct {
 	IP   string `json:"ip"`
@@ -116,13 +132,13 @@ func ReadConf(filename string) (c *TpdnsConfig, err error) {
 		}
 		c.Router.Stok = string(data)
 	}
-	for i, zone := range c.Domain.Zones {
-		c.Domain.Zones[i].CNAMEs = make(map[string]string)
-		for _, record := range zone.Records {
-			//update CNAME to CNAMEs table
-			if record.Type == "CNAME" {
-				c.Domain.Zones[i].CNAMEs[record.Name] = record.Value
+	for _, zone := range c.Domain.Zones {
+		for j, record := range zone.Records {
+			//update regex for matching
+			if !strings.HasSuffix(record.Name, ".") {
+				zone.Records[j].re = regexp.MustCompile("^" + record.Name + "$")
 			}
+
 			//check if record template is vaild
 			if !record.Template.IsEmpty() {
 				err = check_args(record.Template.Args)

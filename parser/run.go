@@ -11,7 +11,7 @@ import (
 	"github.com/miekg/dns"
 )
 
-func (dp *dns_parser) getIPv4(device *tpapi.Device, zone *config.Zone) string {
+func getIPv4(device *tpapi.Device, zone *config.Zone, dp *dns_parser) string {
 	if zone.GlobalIPv4 {
 		return dp.pub_ip.IPv4
 	} else {
@@ -19,7 +19,7 @@ func (dp *dns_parser) getIPv4(device *tpapi.Device, zone *config.Zone) string {
 	}
 }
 
-func (dp *dns_parser) getIPv6(device *tpapi.Device, zone *config.Zone) string {
+func getIPv6(device *tpapi.Device, zone *config.Zone) string {
 	var rsp string
 	if zone.GlobalIPv6 {
 		if rsp == "::" {
@@ -70,7 +70,8 @@ func (dp *dns_parser) parseQuery(m *dns.Msg) {
 		ip_answer_name := q.Name
 		_, incache := dp.dns_cache[device_name]
 		if is_ip_query && !incache {
-			target, inCNAMEs := zone.CNAMEs[device_name]
+			rec, inCNAMEs := zone.Records.Match(device_name, "CNAME")
+			target := rec.Value
 			if inCNAMEs {
 				if strings.HasSuffix(target, ".") {
 					line := fmt.Sprintf("%s %d IN %s %s", q.Name, dp.countdown, "CNAME", target)
@@ -111,27 +112,23 @@ func (dp *dns_parser) parseQuery(m *dns.Msg) {
 
 		switch q.Qtype {
 		case dns.TypeA:
-			rsp = dp.getIPv4(device, zone)
+			rsp = getIPv4(device, zone, dp)
 			dp.addRsp(m, ip_answer_name, rr_type, rsp)
 		case dns.TypeAAAA:
-			rsp = dp.getIPv6(device, zone)
+			rsp = getIPv6(device, zone)
 			if rsp == "" {
 				continue
 			}
 			dp.addRsp(m, ip_answer_name, rr_type, rsp)
 		default:
-			for _, r := range zone.Records {
-				if device_name == r.Name && rr_type == r.Type {
-					if r.Template.IsEmpty() {
-						rsp = r.Value
-					} else if device, ok := dp.dns_cache[r.Template.DeviceName]; ok {
-						args := dp.convertArgs(r.Template.Args, device, zone)
-						rsp = fmt.Sprintf(r.Value, args...)
-					} else {
-						continue
-					}
-					dp.addRsp(m, q.Name, rr_type, rsp)
+			if rec, ok := zone.Records.Match(device_name, rr_type); ok {
+				if device, ok := dp.dns_cache[rec.Template.DeviceName]; ok {
+					args := dp.convertArgs(rec.Template.Args, device, zone)
+					rsp = fmt.Sprintf(rec.Value, args...)
+				} else {
+					rsp = rec.Value
 				}
+				dp.addRsp(m, q.Name, rr_type, rsp)
 			}
 		}
 	}
@@ -145,9 +142,9 @@ func (dp *dns_parser) convertArgs(args []string, device *tpapi.Device, zone *con
 	for _, arg := range args {
 		var f string
 		if arg == "IP" {
-			f = dp.getIPv4(device, zone)
+			f = getIPv4(device, zone, dp)
 		} else if arg == "IPv6" {
-			f = dp.getIPv6(device, zone)
+			f = getIPv6(device, zone)
 		} else {
 			f = reflect.Indirect(ref).FieldByName(arg).String()
 		}

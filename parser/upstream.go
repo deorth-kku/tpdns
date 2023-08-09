@@ -12,6 +12,7 @@ func resolve(domain string, dnsType uint16, server string) (answer []dns.RR) {
 	r, err := dns.Exchange(&m, server)
 	if err != nil {
 		log.Println(err)
+		return
 	}
 	return r.Answer
 }
