@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/parnurzeal/gorequest"
-	"golang.org/x/exp/slices"
 )
 
 type Network struct {

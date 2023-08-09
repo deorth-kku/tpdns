@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/go-playground/validator/v10"
-	"golang.org/x/exp/slices"
 )
 
 type TpdnsConfig struct {

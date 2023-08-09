@@ -1,16 +1,15 @@
 module github.com/deorth-kku/tpdns
 
-go 1.20
+go 1.21.0
 
 require (
 	github.com/go-playground/validator/v10 v10.15.0
 	github.com/miekg/dns v1.1.55
 	github.com/parnurzeal/gorequest v0.2.16
-	golang.org/x/exp v0.0.0-20230807204917-050eac23e9de
 )
 
 require (
-	github.com/elazarl/goproxy v0.0.0-20230731152917-f99041a5c027 // indirect
+	github.com/elazarl/goproxy v0.0.0-20230808193330-2592e75ae04a // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
