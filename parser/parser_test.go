@@ -39,3 +39,10 @@ func TestParser(t *testing.T) {
 		fmt.Println(answer.String())
 	}
 }
+
+func TestUpstream(t *testing.T) {
+	a := resolve("v2ex.com.", dns.TypeHTTPS, "127.0.0.1:53")
+	if len(a) == 0 {
+		t.Error("failed to run upstream dns")
+	}
+}

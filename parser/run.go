@@ -11,6 +11,17 @@ import (
 	"github.com/miekg/dns"
 )
 
+var opt_edns0 = dns.OPT{
+	Hdr: dns.RR_Header{
+		Name:     ".",
+		Rrtype:   41,
+		Class:    1232,
+		Ttl:      0,
+		Rdlength: 0,
+	},
+	Option: []dns.EDNS0{},
+}
+
 func isInZones(domain string, zones []config.Zone) bool {
 	for _, z := range zones {
 		if strings.HasSuffix(domain, z.Name) {
@@ -171,7 +182,10 @@ func (dp *dns_parser) HandleDnsRequest(w dns.ResponseWriter, r *dns.Msg) {
 	if len(m.Answer) == 0 {
 		m.Rcode = dns.RcodeNameError
 	}
-
+	if m.RecursionDesired {
+		m.RecursionAvailable = true
+	}
+	m.Extra = append(m.Extra, &opt_edns0)
 	w.WriteMsg(m)
 }
 
