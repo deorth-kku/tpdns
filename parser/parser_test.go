@@ -30,7 +30,7 @@ func TestParser(t *testing.T) {
 			Qtype: dns.TypeA,
 		},
 		{
-			Name:  "mail.deorth.dynv6.net.",
+			Name:  "abc.wan.",
 			Qtype: dns.TypeHTTPS,
 		},
 	})
