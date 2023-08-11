@@ -97,19 +97,40 @@ func (dp *dns_parser) ask(questions []dns.Question) (answers []dns.RR) {
 			target := rec.Value
 			if inCNAMEs {
 				if strings.HasSuffix(target, ".") {
-					answers = dp.appendAnswer(answers, q.Name, "CNAME", target)
-					if isInZones(target, dp.Conf.Domain.Zones) {
-						answers = append(answers, dp.ask([]dns.Question{{
+					var temp_answers []dns.RR
+					if isInZones(target, dp.Conf.Domain.Zones) { // internal cross-zone
+						temp_answers = append(answers, dp.ask([]dns.Question{{
 							Name:  target,
 							Qtype: q.Qtype,
 						}})...)
-					} else {
-						answers = append(answers, resolve(target, q.Qtype, dp.Conf.Domain.UpstreamServer)...)
+					} else { // external zone
+						temp_answers = append(answers, resolve(target, q.Qtype, dp.Conf.Domain.UpstreamServer)...)
 					}
+
+					if rec.ChromeSVCBWorkaround {
+						for _, a := range temp_answers {
+							str := a.String()
+							str = strings.Replace(str, target, q.Name, 1)
+							new_rr, err := dns.NewRR(str)
+							if err != nil {
+								log.Printf("failed RR '%s'\n", str)
+								continue
+							}
+							answers = append(answers, new_rr)
+						}
+					} else {
+						answers = dp.appendAnswer(answers, q.Name, "CNAME", target)
+						answers = append(answers, temp_answers...)
+					}
+
 					continue
-				} else {
-					answers = dp.appendAnswer(answers, q.Name, "CNAME", target+"."+zone.Name)
-					ip_answer_name = device_name + "." + zone.Name
+				} else { // in-zone/relative CNAME
+					if rec.ChromeSVCBWorkaround {
+						ip_answer_name = q.Name
+					} else {
+						answers = dp.appendAnswer(answers, q.Name, "CNAME", target+"."+zone.Name)
+						ip_answer_name = device_name + "." + zone.Name
+					}
 					device_name = target
 				}
 			} else if !flushed || dp.needFlush {

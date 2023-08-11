@@ -44,11 +44,12 @@ type Zone struct {
 }
 
 type record struct {
-	Name     string         `json:"name"`
-	Type     string         `json:"type"`
-	Value    string         `json:"value"`
-	Template TemplateRecord `json:"template"`
-	re       *regexp.Regexp `json:"-"`
+	Name                 string         `json:"name"`
+	Type                 string         `json:"type"`
+	Value                string         `json:"value"`
+	ChromeSVCBWorkaround bool           `json:"chrome_svcb_workaround"`
+	Template             TemplateRecord `json:"template"`
+	re                   *regexp.Regexp `json:"-"`
 }
 
 type TemplateRecord struct {

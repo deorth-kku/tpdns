@@ -26,8 +26,8 @@ func TestParser(t *testing.T) {
 			Qtype: dns.TypeTXT,
 		},
 		{
-			Name:  "aa.abc.wan.",
-			Qtype: dns.TypeA,
+			Name:  "dd.abc.wan",
+			Qtype: dns.TypeAAAA,
 		},
 		{
 			Name:  "abc.wan.",
