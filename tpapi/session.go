@@ -49,12 +49,12 @@ func (s *TPSession) flushstok() error {
 		Post(s.site).
 		Timeout(5 * time.Second).
 		Send(data).
-		End()
+		EndBytes()
 	if errs != nil {
 		return errs[0]
 	}
 	var rsp loginRsp
-	err := json.Unmarshal([]byte(body), &rsp)
+	err := json.Unmarshal(body, &rsp)
 	if err != nil {
 		return err
 

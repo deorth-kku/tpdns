@@ -51,12 +51,12 @@ func (s *TPSession) apiPost(timeout int, data ...any) (rsp TPResponse, err error
 	for _, d := range data {
 		r.Send(d)
 	}
-	_, body, errs := r.End()
+	_, body, errs := r.EndBytes()
 	if errs != nil {
 		err = errs[0]
 		return
 	}
-	err = json.Unmarshal([]byte(body), &rsp)
+	err = json.Unmarshal(body, &rsp)
 	if len(s.generate_ipv6) != 0 && len(rsp.HostsInfo.HostInfo) != 0 {
 		var prefix string
 		if rsp.Network.Lanv6Status.Prefix != "" {

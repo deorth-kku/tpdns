@@ -19,17 +19,17 @@ func (z *Zone) Update(ipv4address string, ipv6prefix string) (zd Zone, err error
 	}
 	resp, body, errs := z.session.Patch(url).
 		Send(UpdatePayload{ipv4address, ipv6prefix}).
-		End()
+		EndBytes()
 	if len(errs) != 0 {
 		err = errs[0]
 		return
 	}
 	switch resp.StatusCode {
 	case 200:
-		err = json.Unmarshal([]byte(body), &zd)
+		err = json.Unmarshal(body, &zd)
 	case 422:
 		var e error422
-		err = json.Unmarshal([]byte(body), &e)
+		err = json.Unmarshal(body, &e)
 		if err != nil {
 			return
 		}

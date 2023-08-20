@@ -33,13 +33,13 @@ func (z *Zone) GetRecords() (records []Record, err error) {
 	if err != nil {
 		return
 	}
-	resp, body, errs := z.session.Get(url).End()
+	resp, body, errs := z.session.Get(url).EndBytes()
 	if len(errs) != 0 {
 		err = errs[0]
 		return
 	}
 	if resp.StatusCode == 200 {
-		err = json.Unmarshal([]byte(body), &records)
+		err = json.Unmarshal(body, &records)
 		for i := range records {
 			records[i].session = z.session
 		}
@@ -57,13 +57,13 @@ func (z *Zone) AddRecord(info RecordInfo) (record Record, err error) {
 	}
 	resp, body, errs := z.session.Post(url).
 		Send(info).
-		End()
+		EndBytes()
 	if len(errs) != 0 {
 		err = errs[0]
 		return
 	}
 	if resp.StatusCode == 200 {
-		err = json.Unmarshal([]byte(body), &record)
+		err = json.Unmarshal(body, &record)
 		record.session = z.session
 	} else {
 		err = fmt.Errorf("api return with error: %s", http.StatusText(resp.StatusCode))
@@ -76,13 +76,13 @@ func (r *Record) GetRecord(info RecordInfo) (record Record, err error) {
 	if err != nil {
 		return
 	}
-	resp, body, errs := r.session.Get(url).End()
+	resp, body, errs := r.session.Get(url).EndBytes()
 	if len(errs) != 0 {
 		err = errs[0]
 		return
 	}
 	if resp.StatusCode == 200 {
-		err = json.Unmarshal([]byte(body), r)
+		err = json.Unmarshal(body, r)
 		record = *r
 	} else {
 		err = fmt.Errorf("api return with error: %s", http.StatusText(resp.StatusCode))
@@ -97,13 +97,13 @@ func (r *Record) Update(info RecordInfo) (record Record, err error) {
 	}
 	resp, body, errs := r.session.Patch(url).
 		Send(info).
-		End()
+		EndBytes()
 	if len(errs) != 0 {
 		err = errs[0]
 		return
 	}
 	if resp.StatusCode == 200 {
-		err = json.Unmarshal([]byte(body), r)
+		err = json.Unmarshal(body, r)
 		record = *r
 	} else {
 		err = fmt.Errorf("api return with error: %s", http.StatusText(resp.StatusCode))
@@ -116,7 +116,7 @@ func (r *Record) Delete() (err error) {
 	if err != nil {
 		return
 	}
-	resp, _, errs := r.session.Delete(url).End()
+	resp, _, errs := r.session.Delete(url).EndBytes()
 	if len(errs) != 0 {
 		err = errs[0]
 		return

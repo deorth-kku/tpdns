@@ -32,7 +32,7 @@ func New(token string, zone_name string) (zone *Zone, err error) {
 	if err != nil {
 		return
 	}
-	rsp, body, errs := zone.session.Get(url).End()
+	rsp, body, errs := zone.session.Get(url).EndBytes()
 	if len(errs) != 0 {
 		err = errs[0]
 		return
@@ -42,6 +42,6 @@ func New(token string, zone_name string) (zone *Zone, err error) {
 		return
 	}
 
-	err = json.Unmarshal([]byte(body), &zone)
+	err = json.Unmarshal(body, &zone)
 	return
 }
