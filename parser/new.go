@@ -1,7 +1,7 @@
 package parser
 
 import (
-	"sync"
+	"sync/atomic"
 
 	"github.com/deorth-kku/tpdns/config"
 	"github.com/deorth-kku/tpdns/tpapi"
@@ -11,7 +11,7 @@ type dns_parser struct {
 	Conf      *config.TpdnsConfig
 	TpSession *tpapi.TPSession
 
-	dns_cache         map[string]*tpapi.Device
+	dns_cache         atomic.Pointer[map[string]*tpapi.Device]
 	pub_ip            dualstackips
 	countdown         uint
 	resetTimer        chan bool
@@ -20,7 +20,6 @@ type dns_parser struct {
 	onReconnect       func(ipv4 string, ipv6prefix string)
 	onDeviceOnline    func(*tpapi.Device)
 	needFlush         bool
-	cache_lock        sync.Mutex
 }
 
 type dualstackips struct {

@@ -91,7 +91,7 @@ func (dp *dns_parser) ask(questions []dns.Question) (answers []dns.RR) {
 
 		device_name = strings.ToLower(device_name)
 		ip_answer_name := q.Name
-		_, incache := dp.dns_cache[device_name]
+		_, incache := dp.ReadCache()[device_name]
 		if is_ip_query && !incache {
 			rec, inCNAMEs := zone.Records.Match(device_name, "CNAME")
 			target := rec.Value
@@ -140,7 +140,7 @@ func (dp *dns_parser) ask(questions []dns.Question) (answers []dns.RR) {
 			}
 		}
 
-		device, ok := dp.dns_cache[device_name]
+		device, ok := dp.ReadCache()[device_name]
 		if !ok && is_ip_query {
 			log.Printf("failed to find %s in cache", device_name)
 			continue
@@ -161,7 +161,7 @@ func (dp *dns_parser) ask(questions []dns.Question) (answers []dns.RR) {
 			answers = dp.appendAnswer(answers, ip_answer_name, rr_type, rsp)
 		default:
 			if rec, ok := zone.Records.Match(device_name, rr_type); ok {
-				if device, ok := dp.dns_cache[rec.Template.DeviceName]; ok {
+				if device, ok := dp.ReadCache()[rec.Template.DeviceName]; ok {
 					args := dp.convertArgs(rec.Template.Args, device, zone)
 					rsp = fmt.Sprintf(rec.Value, args...)
 				} else {
@@ -253,7 +253,7 @@ func (dp *dns_parser) parsePtrQuery(m *dns.Msg) {
 		ip := strings.Join(reverse(reverse_ip_slice[0:4]), ".")
 		switch q.Qtype {
 		case dns.TypePTR:
-			for name, info := range dp.dns_cache {
+			for name, info := range dp.ReadCache() {
 				if ip == info.IP {
 					line := fmt.Sprintf("%s %d IN PTR %s.%s", q.Name, dp.countdown, name, zone.Name)
 					rr, err := dns.NewRR(line)

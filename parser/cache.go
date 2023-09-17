@@ -11,11 +11,10 @@ import (
 )
 
 func (dp *dns_parser) ReadCache() map[string]*tpapi.Device {
-	return dp.dns_cache
+	return *dp.dns_cache.Load()
 }
 
 func (dp *dns_parser) flushCache(event_enabled bool) {
-	dp.cache_lock.Lock()
 	dp.needFlush = false
 	log.Println("started flushCache")
 	ds, err := dp.TpSession.ApiPost(1, tpapi.Gethostsinfodata, tpapi.Getwanlanv6infodata)
@@ -36,14 +35,14 @@ func (dp *dns_parser) flushCache(event_enabled bool) {
 				}
 				new_cache[host] = &info
 
-				if _, ok := dp.dns_cache[host]; !ok && event_enabled {
+				if _, ok := dp.ReadCache()[host]; !ok && event_enabled {
 					//device without a name wont be sent, for now
 					dp.eventDeviceOnline <- &info
 				}
 			}
 		}
 
-		dp.dns_cache = new_cache
+		dp.dns_cache.Store(&new_cache)
 
 		ipv6prefix := fmt.Sprintf("%s/%s", ds.Network.Lanv6Status.Prefix, ds.Network.Lanv6Status.Prefixlen)
 		if (ds.Network.WanStatus.IPAddr != "" && dp.pub_ip.IPv4 != ds.Network.WanStatus.IPAddr) || ipv6prefix != dp.pub_ip.IPv6 {
@@ -56,9 +55,6 @@ func (dp *dns_parser) flushCache(event_enabled bool) {
 		dp.resetTimer <- true
 		log.Println("finished flushCache")
 	}
-
-	dp.cache_lock.Unlock()
-
 }
 
 func (gdata *dns_parser) ttlCountdown() {
