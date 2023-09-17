@@ -35,6 +35,8 @@ func Parser(conf *config.TpdnsConfig, conn *tpapi.TPSession) *dns_parser {
 		eventReconnect:    make(chan dualstackips, 2),
 		eventDeviceOnline: make(chan *tpapi.Device, 20),
 	}
+
+	gd.dns_cache.Store(&map[string]*tpapi.Device{})
 	gd.flushCache(false)
 	go gd.ttlCountdown()
 	go gd.runEventLoop()
