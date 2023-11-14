@@ -42,11 +42,10 @@ func getIPv4(device *tpapi.Device, zone *config.Zone, dp *dns_parser) string {
 func getIPv6(device *tpapi.Device, zone *config.Zone) string {
 	var rsp string
 	if zone.GlobalIPv6 {
+		rsp = device.IPv6
 		if rsp == "::" {
 			log.Printf("skipping AAAA for %s because it doesn't have ipv6", device.Hostname)
-			return rsp
 		}
-		rsp = device.IPv6
 	} else {
 		rsp, _ = tpapi.Gen_v6("fe80::", device.MAC)
 	}
